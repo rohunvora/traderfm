@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -11,32 +11,21 @@ import Loading from '../components/Loading';
 export default function InboxPage() {
   const { handle } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { user, login, ownsHandle } = useAuth();
+  const { ownsHandle } = useAuth();
   
   const [answeringId, setAnsweringId] = useState(null);
   const [answer, setAnswer] = useState('');
   const [errors, setErrors] = useState([]);
-  const [secretKey, setSecretKey] = useState('');
-  const [showAuth, setShowAuth] = useState(false);
 
-  // Check if already authenticated or try with URL param
+  // Check if already authenticated
   useEffect(() => {
-    const urlKey = searchParams.get('key');
-    if (urlKey && !ownsHandle(handle)) {
-      // Try to authenticate with URL key
-      login(handle, urlKey).then((success) => {
-        if (success) {
-          navigate(`/inbox/${handle}`, { replace: true });
-        } else {
-          setShowAuth(true);
-        }
-      });
-    } else if (!ownsHandle(handle)) {
-      setShowAuth(true);
+    // If user is not authenticated for this handle, redirect to home
+    if (!ownsHandle(handle)) {
+      toast.error('Please sign in to access your inbox');
+      navigate('/');
     }
-  }, [handle, searchParams, ownsHandle, login, navigate]);
+  }, [handle, ownsHandle, navigate]);
 
   // Fetch unanswered questions
   const { data: questions = [], isLoading: loadingQuestions } = useQuery({
@@ -81,14 +70,7 @@ export default function InboxPage() {
     },
   });
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    const success = await login(handle, secretKey);
-    if (success) {
-      setShowAuth(false);
-      navigate(`/inbox/${handle}`, { replace: true });
-    }
-  };
+
 
   const handleAnswer = (questionId) => {
     const validationErrors = validateAnswer(answer);
@@ -100,45 +82,7 @@ export default function InboxPage() {
     answerMutation.mutate({ questionId, answerText: answer });
   };
 
-  // Show auth screen if not authenticated
-  if (showAuth) {
-    return (
-      <div className="max-w-md mx-auto mt-20">
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <h1 className="text-2xl font-bold mb-4">Access Inbox</h1>
-          <p className="text-gray-600 mb-6">
-            Enter your secret key to access @{handle}'s inbox
-          </p>
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            <input
-              type="text"
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              placeholder="Enter secret key"
-              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-              autoFocus
-            />
-
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
-            >
-              Access Inbox
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate(`/u/${handle}`)}
-              className="w-full text-gray-500 hover:text-gray-700"
-            >
-              Back to public page
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   if (loadingQuestions) {
     return <Loading size="lg" className="mt-20" />;
