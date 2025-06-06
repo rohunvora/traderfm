@@ -123,21 +123,29 @@ app.use(passport.session());
 // Global rate limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // increased from 100 to 1000 requests per windowMs
   message: 'Too many requests from this IP',
   standardHeaders: true, // Return rate limit info in the headers
   legacyHeaders: false, // Disable the X-RateLimit-* headers
   // Skip successful requests from rate limiting
   skipSuccessfulRequests: false,
   // Use default key generator (req.ip) which respects trust proxy
-  keyGenerator: (req) => req.ip
+  keyGenerator: (req) => req.ip,
+  // Skip certain endpoints from rate limiting
+  skip: (req) => {
+    // Don't rate limit health checks, directory, or public profile views
+    return req.path === '/api/health' || 
+           req.path === '/api/users/directory' ||
+           req.path.startsWith('/api/users/check/') ||
+           req.path.startsWith('/api/answers/');
+  }
 });
 app.use('/api/', globalLimiter);
 
 // Question-specific rate limiting
 const questionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 3, // limit each IP to 3 questions per minute
+  max: 5, // increased from 3 to 5 questions per minute
   message: 'Too many questions. Please wait before asking again.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -148,15 +156,28 @@ const questionLimiter = rateLimit({
   }
 });
 
+// Auth-specific rate limiting for Twitter auth
+const authLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // 10 auth attempts per 5 minutes
+  message: 'Too many authentication attempts. Please wait before trying again.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  keyGenerator: (req) => req.ip
+});
+
 // API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/auth', twitterAuthRoutes);
 
-// Apply question rate limiter to ask question endpoint
-app.use('/api/questions/:handle', questionLimiter);
+// Apply auth-specific rate limiter to Twitter auth routes
+app.use('/api/auth', authLimiter, twitterAuthRoutes);
+
+// Apply question rate limiter to ask question endpoint specifically
+app.post('/api/questions/:handle', questionLimiter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -174,6 +195,19 @@ app.get('/api/logs', (req, res) => {
     timestamp: new Date().toISOString(),
     totalLogs: recentLogs.length,
     logs: recentLogs.slice(-20) // Show last 20 logs
+  });
+});
+
+// Rate limit info endpoint (for debugging)
+app.get('/api/rate-limit-info', (req, res) => {
+  res.json({
+    ip: req.ip,
+    headers: {
+      'x-forwarded-for': req.headers['x-forwarded-for'],
+      'x-real-ip': req.headers['x-real-ip'],
+      'x-forwarded-host': req.headers['x-forwarded-host']
+    },
+    message: 'Check the response headers for rate limit information'
   });
 });
 
