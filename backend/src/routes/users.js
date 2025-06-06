@@ -13,35 +13,14 @@ router.get('/directory', async (req, res) => {
     global.logger?.log('📁 Fetching user directory');
     
     // Get all users with basic info (excluding sensitive data)
-    const users = await new Promise((resolve, reject) => {
-      const sqlite3 = require('sqlite3').verbose();
-      const db = new sqlite3.Database('./data/traderfm.db');
-      
-      db.all(`
-        SELECT 
-          handle, 
-          twitter_username, 
-          twitter_name, 
-          twitter_profile_image,
-          auth_type,
-          created_at,
-          (SELECT COUNT(*) FROM answers WHERE user_id = users.id) as answer_count
-        FROM users 
-        ORDER BY created_at DESC 
-        LIMIT 50
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-        db.close();
-      });
-    });
+    const users = await statements.getAllUsers.all();
     
     global.logger?.log(`✅ Found ${users.length} users for directory`);
-    res.json({ users });
+    res.json({ users: users || [] });
     
   } catch (error) {
     global.logger?.error('❌ Directory fetch error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', users: [] });
   }
 });
 

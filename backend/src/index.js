@@ -64,6 +64,10 @@ global.logger = logger;
 console.log('🚀 Starting TraderFM server...');
 console.log('📦 Environment:', process.env.NODE_ENV);
 console.log('🔑 JWT_SECRET:', process.env.JWT_SECRET ? 'Set ✅' : 'Missing ❌');
+console.log('🐦 Twitter API Key:', process.env.TWITTER_API_KEY ? 'Set ✅' : 'Missing ❌');
+console.log('🐦 Twitter API Secret:', process.env.TWITTER_API_SECRET ? 'Set ✅' : 'Missing ❌');
+console.log('🔗 Base URL:', process.env.BASE_URL || 'Not set (using defaults)');
+console.log('🔗 Twitter Callback URL:', process.env.TWITTER_CALLBACK_URL || 'Not set (using defaults)');
 
 // Security middleware
 app.use(helmet());

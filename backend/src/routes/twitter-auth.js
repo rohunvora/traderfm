@@ -10,7 +10,8 @@ const router = express.Router();
 passport.use(new TwitterStrategy({
   consumerKey: process.env.TWITTER_API_KEY,
   consumerSecret: process.env.TWITTER_API_SECRET,
-  callbackURL: process.env.TWITTER_CALLBACK_URL || `${process.env.BASE_URL}/api/auth/twitter/callback`
+  callbackURL: process.env.TWITTER_CALLBACK_URL || `${process.env.BASE_URL}/api/auth/twitter/callback`,
+  passReqToCallback: false
 }, async (token, tokenSecret, profile, done) => {
   try {
     global.logger?.log('🐦 Twitter OAuth callback received');
@@ -92,7 +93,10 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Start Twitter OAuth flow
-router.get('/twitter', passport.authenticate('twitter'));
+router.get('/twitter', (req, res, next) => {
+  global.logger?.log('🐦 Starting Twitter OAuth flow...');
+  passport.authenticate('twitter')(req, res, next);
+});
 
 // Twitter OAuth callback
 router.get('/twitter/callback', passport.authenticate('twitter', {
@@ -105,29 +109,36 @@ router.get('/twitter/callback', passport.authenticate('twitter', {
     const token = generateToken(req.user.id, req.user.handle);
     
     // Redirect to frontend with token
-    // In production on Railway, the frontend and backend are on the same domain
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? '' // Use relative URL in production
-      : (process.env.FRONTEND_URL || 'http://localhost:3000');
+    // In production on Railway, use the host from the request
+    let redirectUrl;
     
-    const redirectUrl = new URL(baseUrl || `${req.protocol}://${req.get('host')}`);
-    redirectUrl.searchParams.set('token', token);
-    redirectUrl.searchParams.set('handle', req.user.handle);
-    redirectUrl.searchParams.set('auth_type', 'twitter');
+    if (process.env.NODE_ENV === 'production') {
+      // Use the same domain as the request
+      const host = req.get('host');
+      const protocol = req.get('x-forwarded-proto') || req.protocol;
+      redirectUrl = `${protocol}://${host}/?token=${encodeURIComponent(token)}&handle=${encodeURIComponent(req.user.handle)}&auth_type=twitter`;
+    } else {
+      // Development mode
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      redirectUrl = `${baseUrl}/?token=${encodeURIComponent(token)}&handle=${encodeURIComponent(req.user.handle)}&auth_type=twitter`;
+    }
     
-    global.logger?.log(`🔄 Redirecting to: ${redirectUrl.toString()}`);
+    global.logger?.log(`🔄 Redirecting to: ${redirectUrl}`);
     
     // Clear session after successful authentication (we only need it for OAuth flow)
     req.logout((err) => {
       if (err) {
         global.logger?.error('❌ Session logout error:', err);
       }
-      res.redirect(redirectUrl.toString());
+      res.redirect(redirectUrl);
     });
-  } catch (error) {
-    global.logger?.error('❌ Twitter callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?error=token_generation_failed`);
-  }
+      } catch (error) {
+      global.logger?.error('❌ Twitter callback error:', error);
+      const errorRedirect = process.env.NODE_ENV === 'production'
+        ? '/?error=token_generation_failed'
+        : `${process.env.FRONTEND_URL || 'http://localhost:3000'}?error=token_generation_failed`;
+      res.redirect(errorRedirect);
+    }
 });
 
 module.exports = router; 
