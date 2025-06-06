@@ -77,6 +77,45 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug endpoint to check database status
+app.get('/api/debug', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const dataDir = path.join(__dirname, '../data');
+    const dbPath = path.join(dataDir, 'traderfm.db');
+    
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      jwtSecret: process.env.JWT_SECRET ? 'SET' : 'MISSING',
+      dataDir: {
+        path: dataDir,
+        exists: fs.existsSync(dataDir),
+        readable: fs.existsSync(dataDir) ? fs.constants.R_OK : false,
+        writable: fs.existsSync(dataDir) ? fs.constants.W_OK : false
+      },
+      database: {
+        path: dbPath,
+        exists: fs.existsSync(dbPath),
+        size: fs.existsSync(dbPath) ? fs.statSync(dbPath).size : 0
+      },
+      workingDirectory: process.cwd(),
+      platform: process.platform,
+      nodeVersion: process.version
+    };
+    
+    res.json(debugInfo);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Debug endpoint failed',
+      message: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../frontend/dist')));
