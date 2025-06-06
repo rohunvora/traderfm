@@ -12,7 +12,7 @@ export default function InboxPage() {
   const { handle } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { ownsHandle } = useAuth();
+  const { ownsHandle, loading: authLoading, user } = useAuth();
   
   const [answeringId, setAnsweringId] = useState(null);
   const [answer, setAnswer] = useState('');
@@ -20,12 +20,16 @@ export default function InboxPage() {
 
   // Check if already authenticated
   useEffect(() => {
+    // Wait for auth to load before checking
+    if (authLoading) return;
+    
     // If user is not authenticated for this handle, redirect to home
     if (!ownsHandle(handle)) {
+      console.log('Auth check failed:', { userHandle: user?.handle, pageHandle: handle });
       toast.error('Please sign in to access your inbox');
       navigate('/');
     }
-  }, [handle, ownsHandle, navigate]);
+  }, [handle, ownsHandle, navigate, authLoading, user]);
 
   // Fetch unanswered questions
   const { data: questions = [], isLoading: loadingQuestions } = useQuery({
@@ -84,7 +88,7 @@ export default function InboxPage() {
 
 
 
-  if (loadingQuestions) {
+  if (authLoading || loadingQuestions) {
     return <Loading size="lg" className="mt-20" />;
   }
 
