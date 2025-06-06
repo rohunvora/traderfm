@@ -23,11 +23,19 @@ try {
 const dbPath = path.join(dataDir, 'traderfm.db');
 console.log('🗄️ Database path:', dbPath);
 
-// Create database connection
+// Create database connection with error callback
 let db;
 try {
-  db = new sqlite3.Database(dbPath);
-  console.log('✅ SQLite database connection created');
+  db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+    if (err) {
+      console.error('❌ Failed to open database:', err);
+      console.error('Database path:', dbPath);
+      console.error('Directory exists:', fs.existsSync(dataDir));
+      console.error('Directory permissions:', fs.existsSync(dataDir) ? fs.statSync(dataDir).mode : 'N/A');
+      throw err;
+    }
+    console.log('✅ SQLite database connection created');
+  });
 } catch (error) {
   console.error('❌ Failed to create database connection:', error);
   throw error;
@@ -58,6 +66,18 @@ const runWithResult = (sql, params) => {
 const init = async () => {
   try {
     console.log('🔧 Initializing database schema...');
+    
+    // Wait for database to be ready
+    await new Promise((resolve) => {
+      db.on('open', () => {
+        console.log('✅ Database is open and ready');
+        resolve();
+      });
+      // If already open, resolve immediately
+      if (db.open) {
+        resolve();
+      }
+    });
     
     // Enable foreign keys
     await runAsync('PRAGMA foreign_keys = ON');
