@@ -5,6 +5,15 @@ const { validate, questionRules, answerRules, handleParamRules, idParamRules } =
 
 const router = express.Router();
 
+// Helper function to transform snake_case to camelCase
+const transformQuestion = (question) => ({
+  id: question.id,
+  userId: question.user_id,
+  text: question.text,
+  ipAddress: question.ip_address,
+  createdAt: question.created_at
+});
+
 // Ask a question (anonymous)
 router.post('/:handle', handleParamRules, questionRules, validate, async (req, res) => {
   try {
@@ -50,7 +59,10 @@ router.get('/:handle/unanswered', authenticate, handleParamRules, validate, asyn
     // Get unanswered questions
     const questions = await statements.getUnansweredQuestions.all(req.user.id);
     
-    res.json(questions);
+    // Transform to camelCase
+    const transformedQuestions = questions.map(transformQuestion);
+    
+    res.json(transformedQuestions);
   } catch (error) {
     console.error('Get questions error:', error);
     res.status(500).json({ message: 'Server error' });
