@@ -14,20 +14,20 @@ router.get('/:handle', handleParamRules, validate, async (req, res) => {
     const offset = (page - 1) * limit;
     
     // Get user by handle
-    const user = statements.getUserByHandle.get(handle);
+    const user = await statements.getUserByHandle.get(handle);
     if (!user) {
       return res.status(404).json({ message: 'Handle not found' });
     }
     
     // Get answers
-    const answers = statements.getAnswersByUserId.all(user.id, limit, offset);
-    const totalCount = statements.countAnswersByUserId.get(user.id).count;
+    const answers = await statements.getAnswersByUserId.all(user.id, limit, offset);
+    const totalCount = await statements.countAnswersByUserId.get(user.id);
     
     res.json({
       answers,
-      total: totalCount,
+      total: totalCount.count,
       page,
-      pages: Math.ceil(totalCount / limit)
+      pages: Math.ceil(totalCount.count / limit)
     });
   } catch (error) {
     console.error('Get answers error:', error);
@@ -41,7 +41,7 @@ router.delete('/:id', authenticate, idParamRules, validate, async (req, res) => 
     const answerId = parseInt(req.params.id);
     
     // Delete answer (only if user owns it)
-    const result = statements.deleteAnswer.run(answerId, req.user.id);
+    const result = await statements.deleteAnswer.run(answerId, req.user.id);
     
     if (result.changes === 0) {
       return res.status(404).json({ message: 'Answer not found or unauthorized' });

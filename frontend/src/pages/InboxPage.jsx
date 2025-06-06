@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { questionsAPI, statsAPI } from '../services/api';
 import { validateAnswer } from '../utils/validation';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.jsx';
 import Loading from '../components/Loading';
 
 export default function InboxPage() {

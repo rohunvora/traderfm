@@ -27,7 +27,7 @@ const authenticate = async (req, res, next) => {
       const decoded = jwt.verify(token, JWT_SECRET);
       
       // Get user from database
-      const user = statements.getUserById.get(decoded.userId);
+      const user = await statements.getUserById.get(decoded.userId);
       
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
@@ -59,7 +59,7 @@ const optionalAuth = async (req, res, next) => {
       
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user = statements.getUserById.get(decoded.userId);
+        const user = await statements.getUserById.get(decoded.userId);
         
         if (user) {
           req.user = {

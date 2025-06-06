@@ -12,7 +12,7 @@ router.post('/:handle', handleParamRules, questionRules, validate, async (req, r
     const { text } = req.body;
     
     // Get user by handle
-    const user = statements.getUserByHandle.get(handle);
+    const user = await statements.getUserByHandle.get(handle);
     if (!user) {
       return res.status(404).json({ message: 'Handle not found' });
     }
@@ -21,7 +21,7 @@ router.post('/:handle', handleParamRules, questionRules, validate, async (req, r
     const ipAddress = req.ip || req.connection.remoteAddress;
     
     // Create question
-    const result = statements.createQuestion.run({
+    const result = await statements.createQuestion.run({
       user_id: user.id,
       text: text.trim(),
       ip_address: ipAddress
@@ -48,7 +48,7 @@ router.get('/:handle/unanswered', authenticate, handleParamRules, validate, asyn
     }
     
     // Get unanswered questions
-    const questions = statements.getUnansweredQuestions.all(req.user.id);
+    const questions = await statements.getUnansweredQuestions.all(req.user.id);
     
     res.json(questions);
   } catch (error) {
@@ -59,13 +59,13 @@ router.get('/:handle/unanswered', authenticate, handleParamRules, validate, asyn
 
 // Answer a question (requires auth)
 router.post('/:id/answer', authenticate, idParamRules, answerRules, validate, async (req, res) => {
-  const transaction = db.transaction(() => {
+  const transaction = db.transaction(async () => {
     try {
       const questionId = parseInt(req.params.id);
       const { answerText } = req.body;
       
       // Get question
-      const question = statements.getQuestionById.get(questionId);
+      const question = await statements.getQuestionById.get(questionId);
       if (!question) {
         return res.status(404).json({ message: 'Question not found' });
       }
@@ -76,7 +76,7 @@ router.post('/:id/answer', authenticate, idParamRules, answerRules, validate, as
       }
       
       // Create answer
-      const result = statements.createAnswer.run({
+      const result = await statements.createAnswer.run({
         question_id: questionId,
         user_id: req.user.id,
         question_text: question.text,
@@ -84,7 +84,7 @@ router.post('/:id/answer', authenticate, idParamRules, answerRules, validate, as
       });
       
       // Delete the question (it's been answered)
-      statements.deleteQuestion.run(questionId);
+      await statements.deleteQuestion.run(questionId);
       
       res.status(201).json({
         message: 'Answer posted successfully',
@@ -96,7 +96,7 @@ router.post('/:id/answer', authenticate, idParamRules, answerRules, validate, as
     }
   });
   
-  transaction();
+  await transaction();
 });
 
 // Delete a question (requires auth)
@@ -105,7 +105,7 @@ router.delete('/:id', authenticate, idParamRules, validate, async (req, res) => 
     const questionId = parseInt(req.params.id);
     
     // Get question
-    const question = statements.getQuestionById.get(questionId);
+    const question = await statements.getQuestionById.get(questionId);
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
@@ -116,7 +116,7 @@ router.delete('/:id', authenticate, idParamRules, validate, async (req, res) => 
     }
     
     // Delete question
-    statements.deleteQuestion.run(questionId);
+    await statements.deleteQuestion.run(questionId);
     
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {

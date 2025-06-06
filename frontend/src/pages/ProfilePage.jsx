@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { questionsAPI, answersAPI, userAPI } from '../services/api';
 import { validateQuestion } from '../utils/validation';
 import { containsProfanity, getProfanityMessage } from '../utils/profanity';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.jsx';
 import Loading from '../components/Loading';
 
 export default function ProfilePage() {

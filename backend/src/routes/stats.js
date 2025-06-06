@@ -16,7 +16,7 @@ router.get('/:handle', authenticate, handleParamRules, validate, async (req, res
     }
     
     // Get stats
-    const stats = statements.getUserStats.get(req.user.id, req.user.id);
+    const stats = await statements.getUserStats.get(req.user.id, req.user.id);
     
     res.json({
       handle,
