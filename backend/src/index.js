@@ -25,6 +25,9 @@ const db = require('./utils/database');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Trust proxy for Railway deployment
+app.set('trust proxy', true);
+
 // Store recent logs in memory for debugging
 const recentLogs = [];
 const maxLogs = 50;

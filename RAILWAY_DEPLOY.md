@@ -18,8 +18,8 @@ In Railway dashboard, set these environment variables:
 - `NODE_ENV`: `production`
 
 ### For Twitter OAuth (Optional but Recommended):
-- `TWITTER_API_KEY`: Your Twitter API key from developer.twitter.com
-- `TWITTER_API_SECRET`: Your Twitter API secret from developer.twitter.com
+- `TWITTER_API_KEY`: Your Twitter API key (Consumer Key) from developer.twitter.com
+- `TWITTER_API_SECRET`: Your Twitter API secret (Consumer Secret) from developer.twitter.com
 - `BASE_URL`: Your Railway backend URL (e.g., https://your-app.up.railway.app)
 - `TWITTER_CALLBACK_URL`: Your Twitter callback URL (e.g., https://your-app.up.railway.app/api/auth/twitter/callback)
 

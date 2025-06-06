@@ -1,17 +1,17 @@
 const express = require('express');
 const passport = require('passport');
-const TwitterStrategy = require('passport-twitter-oauth2').Strategy;
+const TwitterStrategy = require('passport-twitter').Strategy;
 const { statements } = require('../utils/database');
 const { generateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Configure Twitter OAuth strategy
+// Configure Twitter OAuth strategy (OAuth 1.0a)
 passport.use(new TwitterStrategy({
-  clientID: process.env.TWITTER_API_KEY,
-  clientSecret: process.env.TWITTER_API_SECRET,
+  consumerKey: process.env.TWITTER_API_KEY,
+  consumerSecret: process.env.TWITTER_API_SECRET,
   callbackURL: process.env.TWITTER_CALLBACK_URL || `${process.env.BASE_URL}/api/auth/twitter/callback`
-}, async (accessToken, refreshToken, profile, done) => {
+}, async (token, tokenSecret, profile, done) => {
   try {
     global.logger?.log('🐦 Twitter OAuth callback received');
     global.logger?.log(`👤 Twitter profile: ${JSON.stringify(profile, null, 2)}`);
@@ -70,9 +70,7 @@ passport.use(new TwitterStrategy({
 // Note: No session serialization needed - using stateless JWT authentication
 
 // Start Twitter OAuth flow
-router.get('/twitter', passport.authenticate('twitter', {
-  scope: ['tweet.read', 'users.read']
-}));
+router.get('/twitter', passport.authenticate('twitter'));
 
 // Twitter OAuth callback
 router.get('/twitter/callback', passport.authenticate('twitter', {
