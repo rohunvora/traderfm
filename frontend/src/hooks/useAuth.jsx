@@ -35,9 +35,9 @@ export function AuthProvider({ children }) {
       setUser({ handle, token, authType });
       toast.success(`Welcome ${handle}!`);
       
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setLoading(false);
+      // Redirect to inbox after cleaning URL
+      window.history.replaceState({}, document.title, `/inbox`);
+      window.location.href = '/inbox';
       return;
     }
     

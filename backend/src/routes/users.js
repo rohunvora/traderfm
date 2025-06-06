@@ -58,7 +58,21 @@ router.get('/check/:handle', handleParamRules, validate, async (req, res) => {
     }
     
     global.logger?.log(`✅ Handle exists: ${handle}`);
-    res.json({ exists: true });
+    
+    // Return public profile info for Twitter users
+    const publicInfo = {
+      exists: true,
+      handle: user.handle,
+      auth_type: user.auth_type
+    };
+    
+    if (user.auth_type === 'twitter') {
+      publicInfo.twitter_username = user.twitter_username;
+      publicInfo.twitter_name = user.twitter_name;
+      publicInfo.twitter_profile_image = user.twitter_profile_image;
+    }
+    
+    res.json(publicInfo);
   } catch (error) {
     global.logger?.error('❌ Check handle error:', error);
     res.status(500).json({ message: 'Server error' });
