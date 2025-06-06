@@ -10,6 +10,19 @@ const migrations = [
     up: async (db) => {
       console.log('🔄 Running migration 1: Add Twitter OAuth columns...');
       
+      // Check if users table exists
+      const tableExists = await new Promise((resolve, reject) => {
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (err, row) => {
+          if (err) reject(err);
+          else resolve(!!row);
+        });
+      });
+      
+      if (!tableExists) {
+        console.log('✓ Users table does not exist yet, skipping migration');
+        return;
+      }
+      
       // Check if columns already exist
       const tableInfo = await new Promise((resolve, reject) => {
         db.all("PRAGMA table_info(users)", (err, rows) => {
@@ -19,12 +32,22 @@ const migrations = [
       });
       
       const columnNames = tableInfo.map(col => col.name);
+      
+      // If twitter_id already exists, assume this is a fresh database with new schema
+      if (columnNames.includes('twitter_id')) {
+        console.log('✓ Twitter columns already exist, skipping migration');
+        return;
+      }
+      
+      // This is an old database that needs updating
+      console.log('📝 Updating existing database with Twitter OAuth columns...');
+      
       const columnsToAdd = [
         { name: 'twitter_id', sql: 'ALTER TABLE users ADD COLUMN twitter_id TEXT UNIQUE' },
         { name: 'twitter_username', sql: 'ALTER TABLE users ADD COLUMN twitter_username TEXT UNIQUE' },
         { name: 'twitter_name', sql: 'ALTER TABLE users ADD COLUMN twitter_name TEXT' },
         { name: 'twitter_profile_image', sql: 'ALTER TABLE users ADD COLUMN twitter_profile_image TEXT' },
-        { name: 'auth_type', sql: "ALTER TABLE users ADD COLUMN auth_type TEXT DEFAULT 'secret_key' CHECK (auth_type IN ('secret_key', 'twitter'))" }
+        { name: 'auth_type', sql: "ALTER TABLE users ADD COLUMN auth_type TEXT DEFAULT 'secret_key'" }
       ];
       
       for (const column of columnsToAdd) {
@@ -40,8 +63,6 @@ const migrations = [
               }
             });
           });
-        } else {
-          console.log(`✓ Column already exists: ${column.name}`);
         }
       }
       
