@@ -67,20 +67,7 @@ passport.use(new TwitterStrategy({
   }
 }));
 
-// Serialize user for session
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
-// Deserialize user from session
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await statements.getUserById.get(id);
-    done(null, user);
-  } catch (error) {
-    done(error, null);
-  }
-});
+// Note: No session serialization needed - using stateless JWT authentication
 
 // Start Twitter OAuth flow
 router.get('/twitter', passport.authenticate('twitter', {

@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const session = require('express-session');
 const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
@@ -70,17 +69,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware for Passport
-app.use(session({
-  secret: process.env.JWT_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
-}));
-
-// Passport middleware
+// Passport middleware (stateless, no sessions)
 app.use(passport.initialize());
-app.use(passport.session());
 
 // Global rate limiting
 const globalLimiter = rateLimit({
