@@ -10,13 +10,44 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing auth on mount
+  // Check for existing auth on mount and handle Twitter OAuth callback
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const handle = localStorage.getItem('auth_handle');
+    // Check URL parameters for Twitter OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const handle = urlParams.get('handle');
+    const authType = urlParams.get('auth_type');
+    const error = urlParams.get('error');
     
-    if (token && handle) {
-      setUser({ handle, token });
+    if (error) {
+      toast.error('Twitter authentication failed');
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setLoading(false);
+      return;
+    }
+    
+    if (token && handle && authType === 'twitter') {
+      // Twitter OAuth successful
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_handle', handle);
+      localStorage.setItem('auth_type', authType);
+      setUser({ handle, token, authType });
+      toast.success(`Welcome ${handle}!`);
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setLoading(false);
+      return;
+    }
+    
+    // Check for existing auth
+    const existingToken = localStorage.getItem('auth_token');
+    const existingHandle = localStorage.getItem('auth_handle');
+    const existingAuthType = localStorage.getItem('auth_type') || 'secret_key';
+    
+    if (existingToken && existingHandle) {
+      setUser({ handle: existingHandle, token: existingToken, authType: existingAuthType });
     }
     
     setLoading(false);
@@ -30,7 +61,8 @@ export function AuthProvider({ children }) {
       if (response.token) {
         localStorage.setItem('auth_token', response.token);
         localStorage.setItem('auth_handle', handle);
-        setUser({ handle, token: response.token });
+        localStorage.setItem('auth_type', 'secret_key');
+        setUser({ handle, token: response.token, authType: 'secret_key' });
         toast.success('Successfully authenticated!');
         return true;
       }
@@ -40,10 +72,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Twitter login function
+  const loginWithTwitter = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    window.location.href = `${apiUrl}/auth/twitter`;
+  };
+
   // Logout function
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_handle');
+    localStorage.removeItem('auth_type');
     setUser(null);
     toast.success('Logged out successfully');
   };
@@ -57,6 +96,7 @@ export function AuthProvider({ children }) {
     user,
     loading,
     login,
+    loginWithTwitter,
     logout,
     ownsHandle,
     isAuthenticated: !!user,
