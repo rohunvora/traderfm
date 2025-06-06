@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/check/:handle', handleParamRules, validate, async (req, res) => {
   try {
     const { handle } = req.params;
-    const user = statements.getUserByHandle.get(handle);
+    const user = await statements.getUserByHandle.get(handle);
     
     if (!user) {
       return res.status(404).json({ message: 'Handle not found' });
@@ -30,7 +30,7 @@ router.post('/create', handleRules, validate, async (req, res) => {
     const { handle } = req.body;
     
     // Check if handle already exists
-    const existingUser = statements.getUserByHandle.get(handle);
+    const existingUser = await statements.getUserByHandle.get(handle);
     if (existingUser) {
       return res.status(400).json({ message: 'Handle already exists' });
     }
@@ -39,7 +39,7 @@ router.post('/create', handleRules, validate, async (req, res) => {
     const secretKey = uuidv4();
     
     // Create user
-    const result = statements.createUser.run({
+    const result = await statements.createUser.run({
       handle,
       secret_key: await bcrypt.hash(secretKey, 10)
     });
@@ -61,7 +61,7 @@ router.post('/auth', authRules, validate, async (req, res) => {
     const { handle, secretKey } = req.body;
     
     // Get user
-    const user = statements.getUserByHandle.get(handle);
+    const user = await statements.getUserByHandle.get(handle);
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
