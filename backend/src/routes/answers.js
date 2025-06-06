@@ -23,15 +23,21 @@ router.get('/:handle', handleParamRules, validate, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100); // Max 100 per page
     const offset = (page - 1) * limit;
     
+    console.log('📖 Getting answers for handle:', handle);
+    
     // Get user by handle
     const user = await statements.getUserByHandle.get(handle);
     if (!user) {
       return res.status(404).json({ message: 'Handle not found' });
     }
     
+    console.log('👤 Found user:', { id: user.id, handle: user.handle });
+    
     // Get answers
     const answers = await statements.getAnswersByUserId.all(user.id, limit, offset);
     const totalCount = await statements.countAnswersByUserId.get(user.id);
+    
+    console.log('💬 Found answers:', { count: answers.length, total: totalCount.count });
     
     // Transform to camelCase
     const transformedAnswers = answers.map(transformAnswer);
