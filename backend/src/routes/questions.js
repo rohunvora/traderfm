@@ -71,20 +71,27 @@ router.get('/:handle/unanswered', authenticate, handleParamRules, validate, asyn
 
 // Answer a question (requires auth)
 router.post('/:id/answer', authenticate, idParamRules, answerRules, validate, async (req, res) => {
-  const transaction = db.transaction(async () => {
-    try {
-      const questionId = parseInt(req.params.id);
-      const { answerText } = req.body;
-      
+  try {
+    const questionId = parseInt(req.params.id);
+    const { answerText } = req.body;
+    
+    console.log('📝 Answering question:', { questionId, userId: req.user.id, answerText });
+    
+    let answerId;
+    
+    // Run transaction
+    const transaction = db.transaction(async () => {
       // Get question
       const question = await statements.getQuestionById.get(questionId);
       if (!question) {
-        return res.status(404).json({ message: 'Question not found' });
+        throw new Error('Question not found');
       }
+      
+      console.log('❓ Found question:', question);
       
       // Verify user owns this question
       if (question.user_id !== req.user.id) {
-        return res.status(403).json({ message: 'Unauthorized' });
+        throw new Error('Unauthorized');
       }
       
       // Create answer
@@ -95,20 +102,32 @@ router.post('/:id/answer', authenticate, idParamRules, answerRules, validate, as
         answer_text: answerText.trim()
       });
       
+      answerId = result.lastInsertRowid;
+      console.log('✅ Answer created with ID:', answerId);
+      
       // Delete the question (it's been answered)
       await statements.deleteQuestion.run(questionId);
-      
-      res.status(201).json({
-        message: 'Answer posted successfully',
-        answerId: result.lastInsertRowid
-      });
-    } catch (error) {
-      console.error('Answer question error:', error);
-      res.status(500).json({ message: 'Server error' });
+      console.log('🗑️ Question deleted');
+    });
+    
+    await transaction();
+    
+    res.status(201).json({
+      message: 'Answer posted successfully',
+      answerId: answerId
+    });
+  } catch (error) {
+    console.error('Answer question error:', error);
+    
+    if (error.message === 'Question not found') {
+      return res.status(404).json({ message: 'Question not found' });
     }
-  });
-  
-  await transaction();
+    if (error.message === 'Unauthorized') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Delete a question (requires auth)
