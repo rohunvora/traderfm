@@ -74,7 +74,12 @@ export function AuthProvider({ children }) {
 
   // Twitter login function
   const loginWithTwitter = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    // In production (Railway), use relative URL. In development, use localhost.
+    const isProduction = window.location.hostname !== 'localhost';
+    const apiUrl = isProduction 
+      ? '/api'  // Relative URL for production
+      : (import.meta.env.VITE_API_URL || 'http://localhost:5001/api');
+    
     window.location.href = `${apiUrl}/auth/twitter`;
   };
 
