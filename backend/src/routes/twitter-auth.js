@@ -67,14 +67,25 @@ passport.use(new TwitterStrategy({
   }
 }));
 
-// Note: No session serialization needed - using stateless JWT authentication
+// Session serialization for Twitter OAuth 1.0a
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await statements.getUserById.get(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 // Start Twitter OAuth flow
 router.get('/twitter', passport.authenticate('twitter'));
 
 // Twitter OAuth callback
 router.get('/twitter/callback', passport.authenticate('twitter', {
-  session: false,
   failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}?error=twitter_auth_failed`
 }), (req, res) => {
   try {
@@ -88,7 +99,14 @@ router.get('/twitter/callback', passport.authenticate('twitter', {
     redirectUrl.searchParams.set('auth_type', 'twitter');
     
     global.logger?.log(`🔄 Redirecting to: ${redirectUrl.toString()}`);
-    res.redirect(redirectUrl.toString());
+    
+    // Clear session after successful authentication (we only need it for OAuth flow)
+    req.logout((err) => {
+      if (err) {
+        global.logger?.error('❌ Session logout error:', err);
+      }
+      res.redirect(redirectUrl.toString());
+    });
   } catch (error) {
     global.logger?.error('❌ Twitter callback error:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?error=token_generation_failed`);
