@@ -1,0 +1,20 @@
+[variables]
+NODE_VERSION = "18"
+
+[phases.setup]
+nixPkgs = ["nodejs", "npm"]
+
+[phases.install]
+cmds = [
+  "npm install",
+  "cd frontend && npm install",
+  "cd backend && npm install --only=production"
+]
+
+[phases.build]
+cmds = [
+  "cd frontend && npm run build"
+]
+
+[start]
+cmd = "cd backend && node src/index.js" 

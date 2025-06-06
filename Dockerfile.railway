@@ -1,0 +1,33 @@
+# Railway Dockerfile for TraderFM
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+COPY backend/package*.json ./backend/
+
+# Install dependencies
+RUN npm install --only=production
+RUN cd frontend && npm install
+RUN cd backend && npm install --only=production
+
+# Copy source code
+COPY frontend/ ./frontend/
+COPY backend/ ./backend/
+
+# Build frontend
+RUN cd frontend && npm run build
+
+# Create data directory for SQLite
+RUN mkdir -p backend/data
+
+# Set environment
+ENV NODE_ENV=production
+
+# Expose port (Railway will set this automatically)
+EXPOSE 5001
+
+# Start the backend server
+CMD ["node", "backend/src/index.js"] 
