@@ -5,6 +5,12 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is required');
+  process.exit(1);
+}
+
 // Import routes
 const userRoutes = require('./routes/users');
 const questionRoutes = require('./routes/questions');
@@ -17,10 +23,14 @@ const db = require('./utils/database');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+console.log('🚀 Starting TraderFM server...');
+console.log('📦 Environment:', process.env.NODE_ENV);
+console.log('🔑 JWT_SECRET:', process.env.JWT_SECRET ? 'Set ✅' : 'Missing ❌');
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || true,
   credentials: true
 }));
 
@@ -59,7 +69,12 @@ app.use('/api/questions/:handle', questionLimiter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    port: PORT
+  });
 });
 
 // Serve static files in production
@@ -73,7 +88,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ Server Error:', err.stack);
   
   if (err.type === 'entity.too.large') {
     return res.status(413).json({ message: 'Request too large' });
@@ -87,19 +102,21 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log('❓ 404 Request:', req.method, req.url);
   res.status(404).json({ message: 'Route not found' });
 });
 
 // Initialize database
 db.init().then(() => {
-  console.log('Database initialized');
+  console.log('✅ Database initialized');
   
   // Start server
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌟 Server running on port ${PORT}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   });
 }).catch(err => {
-  console.error('Failed to initialize database:', err);
+  console.error('❌ Failed to initialize database:', err);
   process.exit(1);
 }); 

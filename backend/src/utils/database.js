@@ -5,12 +5,33 @@ const { promisify } = require('util');
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, '../../data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+console.log('📁 Database directory:', dataDir);
+
+try {
+  if (!fs.existsSync(dataDir)) {
+    console.log('📁 Creating data directory...');
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log('✅ Data directory created');
+  } else {
+    console.log('✅ Data directory exists');
+  }
+} catch (error) {
+  console.error('❌ Failed to create data directory:', error);
 }
 
+// Database file path
+const dbPath = path.join(dataDir, 'traderfm.db');
+console.log('🗄️ Database path:', dbPath);
+
 // Create database connection
-const db = new sqlite3.Database(path.join(dataDir, 'traderfm.db'));
+let db;
+try {
+  db = new sqlite3.Database(dbPath);
+  console.log('✅ SQLite database connection created');
+} catch (error) {
+  console.error('❌ Failed to create database connection:', error);
+  throw error;
+}
 
 // Promisify database methods
 const runAsync = promisify(db.run.bind(db));
@@ -20,8 +41,11 @@ const allAsync = promisify(db.all.bind(db));
 // Initialize database schema
 const init = async () => {
   try {
+    console.log('🔧 Initializing database schema...');
+    
     // Enable foreign keys
     await runAsync('PRAGMA foreign_keys = ON');
+    console.log('✅ Foreign keys enabled');
 
     // Users table
     await runAsync(`
@@ -33,6 +57,7 @@ const init = async () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Users table ready');
 
     // Questions table
     await runAsync(`
@@ -45,6 +70,7 @@ const init = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+    console.log('✅ Questions table ready');
 
     // Answers table
     await runAsync(`
@@ -59,12 +85,14 @@ const init = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+    console.log('✅ Answers table ready');
 
     // Create indexes for better performance
     await runAsync('CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id)');
     await runAsync('CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id)');
     await runAsync('CREATE INDEX IF NOT EXISTS idx_answers_created_at ON answers(created_at)');
     await runAsync('CREATE INDEX IF NOT EXISTS idx_users_handle ON users(handle)');
+    console.log('✅ Database indexes created');
 
     // Create triggers to update the updated_at timestamp
     await runAsync(`
@@ -74,98 +102,159 @@ const init = async () => {
         UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
       END
     `);
+    console.log('✅ Database triggers created');
 
-    console.log('Database schema initialized successfully');
+    console.log('🎉 Database schema initialized successfully');
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('❌ Database initialization error:', error);
     throw error;
   }
 };
 
-// Helper functions for database operations
+// Helper functions for database operations with error handling
 const dbOperations = {
   // User operations
   createUser: async (handle, secretKey) => {
-    const result = await runAsync(
-      'INSERT INTO users (handle, secret_key) VALUES (?, ?)',
-      [handle, secretKey]
-    );
-    return { lastInsertRowid: result.lastID };
+    try {
+      const result = await runAsync(
+        'INSERT INTO users (handle, secret_key) VALUES (?, ?)',
+        [handle, secretKey]
+      );
+      return { lastInsertRowid: result.lastID };
+    } catch (error) {
+      console.error('❌ createUser error:', error);
+      throw error;
+    }
   },
 
   getUserByHandle: async (handle) => {
-    return await getAsync('SELECT * FROM users WHERE handle = ?', [handle]);
+    try {
+      return await getAsync('SELECT * FROM users WHERE handle = ?', [handle]);
+    } catch (error) {
+      console.error('❌ getUserByHandle error:', error);
+      throw error;
+    }
   },
 
   getUserById: async (id) => {
-    return await getAsync('SELECT * FROM users WHERE id = ?', [id]);
+    try {
+      return await getAsync('SELECT * FROM users WHERE id = ?', [id]);
+    } catch (error) {
+      console.error('❌ getUserById error:', error);
+      throw error;
+    }
   },
 
   // Question operations
   createQuestion: async (userId, text, ipAddress) => {
-    const result = await runAsync(
-      'INSERT INTO questions (user_id, text, ip_address) VALUES (?, ?, ?)',
-      [userId, text, ipAddress]
-    );
-    return { lastInsertRowid: result.lastID };
+    try {
+      const result = await runAsync(
+        'INSERT INTO questions (user_id, text, ip_address) VALUES (?, ?, ?)',
+        [userId, text, ipAddress]
+      );
+      return { lastInsertRowid: result.lastID };
+    } catch (error) {
+      console.error('❌ createQuestion error:', error);
+      throw error;
+    }
   },
 
   getUnansweredQuestions: async (userId) => {
-    return await allAsync(`
-      SELECT q.* FROM questions q
-      LEFT JOIN answers a ON q.id = a.question_id
-      WHERE q.user_id = ? AND a.id IS NULL
-      ORDER BY q.created_at DESC
-    `, [userId]);
+    try {
+      return await allAsync(`
+        SELECT q.* FROM questions q
+        LEFT JOIN answers a ON q.id = a.question_id
+        WHERE q.user_id = ? AND a.id IS NULL
+        ORDER BY q.created_at DESC
+      `, [userId]);
+    } catch (error) {
+      console.error('❌ getUnansweredQuestions error:', error);
+      throw error;
+    }
   },
 
   getQuestionById: async (id) => {
-    return await getAsync('SELECT * FROM questions WHERE id = ?', [id]);
+    try {
+      return await getAsync('SELECT * FROM questions WHERE id = ?', [id]);
+    } catch (error) {
+      console.error('❌ getQuestionById error:', error);
+      throw error;
+    }
   },
 
   deleteQuestion: async (id) => {
-    const result = await runAsync('DELETE FROM questions WHERE id = ?', [id]);
-    return { changes: result.changes };
+    try {
+      const result = await runAsync('DELETE FROM questions WHERE id = ?', [id]);
+      return { changes: result.changes };
+    } catch (error) {
+      console.error('❌ deleteQuestion error:', error);
+      throw error;
+    }
   },
 
   // Answer operations
   createAnswer: async (questionId, userId, questionText, answerText) => {
-    const result = await runAsync(
-      'INSERT INTO answers (question_id, user_id, question_text, answer_text) VALUES (?, ?, ?, ?)',
-      [questionId, userId, questionText, answerText]
-    );
-    return { lastInsertRowid: result.lastID };
+    try {
+      const result = await runAsync(
+        'INSERT INTO answers (question_id, user_id, question_text, answer_text) VALUES (?, ?, ?, ?)',
+        [questionId, userId, questionText, answerText]
+      );
+      return { lastInsertRowid: result.lastID };
+    } catch (error) {
+      console.error('❌ createAnswer error:', error);
+      throw error;
+    }
   },
 
   getAnswersByUserId: async (userId, limit, offset) => {
-    return await allAsync(
-      'SELECT * FROM answers WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [userId, limit, offset]
-    );
+    try {
+      return await allAsync(
+        'SELECT * FROM answers WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+        [userId, limit, offset]
+      );
+    } catch (error) {
+      console.error('❌ getAnswersByUserId error:', error);
+      throw error;
+    }
   },
 
   countAnswersByUserId: async (userId) => {
-    return await getAsync(
-      'SELECT COUNT(*) as count FROM answers WHERE user_id = ?',
-      [userId]
-    );
+    try {
+      return await getAsync(
+        'SELECT COUNT(*) as count FROM answers WHERE user_id = ?',
+        [userId]
+      );
+    } catch (error) {
+      console.error('❌ countAnswersByUserId error:', error);
+      throw error;
+    }
   },
 
   deleteAnswer: async (id, userId) => {
-    const result = await runAsync(
-      'DELETE FROM answers WHERE id = ? AND user_id = ?',
-      [id, userId]
-    );
-    return { changes: result.changes };
+    try {
+      const result = await runAsync(
+        'DELETE FROM answers WHERE id = ? AND user_id = ?',
+        [id, userId]
+      );
+      return { changes: result.changes };
+    } catch (error) {
+      console.error('❌ deleteAnswer error:', error);
+      throw error;
+    }
   },
 
   // Stats operations
   getUserStats: async (userId) => {
-    return await getAsync(`
-      SELECT 
-        (SELECT COUNT(*) FROM questions WHERE user_id = ?) as total_questions,
-        (SELECT COUNT(*) FROM answers WHERE user_id = ?) as total_answers
-    `, [userId, userId]);
+    try {
+      return await getAsync(`
+        SELECT 
+          (SELECT COUNT(*) FROM questions WHERE user_id = ?) as total_questions,
+          (SELECT COUNT(*) FROM answers WHERE user_id = ?) as total_answers
+      `, [userId, userId]);
+    } catch (error) {
+      console.error('❌ getUserStats error:', error);
+      throw error;
+    }
   },
 
   // Transaction helper
