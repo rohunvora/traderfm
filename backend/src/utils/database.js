@@ -68,7 +68,12 @@ const init = async () => {
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         handle TEXT UNIQUE NOT NULL,
-        secret_key TEXT NOT NULL,
+        secret_key TEXT,
+        twitter_id TEXT UNIQUE,
+        twitter_username TEXT UNIQUE,
+        twitter_name TEXT,
+        twitter_profile_image TEXT,
+        auth_type TEXT DEFAULT 'secret_key' CHECK (auth_type IN ('secret_key', 'twitter')),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -133,12 +138,34 @@ const dbOperations = {
   createUser: async (handle, secretKey) => {
     try {
       const result = await runWithResult(
-        'INSERT INTO users (handle, secret_key) VALUES (?, ?)',
-        [handle, secretKey]
+        'INSERT INTO users (handle, secret_key, auth_type) VALUES (?, ?, ?)',
+        [handle, secretKey, 'secret_key']
       );
       return { lastInsertRowid: result.lastID };
     } catch (error) {
       console.error('❌ createUser error:', error);
+      throw error;
+    }
+  },
+
+  createTwitterUser: async (handle, twitterId, twitterUsername, twitterName, profileImage) => {
+    try {
+      const result = await runWithResult(
+        'INSERT INTO users (handle, twitter_id, twitter_username, twitter_name, twitter_profile_image, auth_type) VALUES (?, ?, ?, ?, ?, ?)',
+        [handle, twitterId, twitterUsername, twitterName, profileImage, 'twitter']
+      );
+      return { lastInsertRowid: result.lastID };
+    } catch (error) {
+      console.error('❌ createTwitterUser error:', error);
+      throw error;
+    }
+  },
+
+  getUserByTwitterId: async (twitterId) => {
+    try {
+      return await getAsync('SELECT * FROM users WHERE twitter_id = ?', [twitterId]);
+    } catch (error) {
+      console.error('❌ getUserByTwitterId error:', error);
       throw error;
     }
   },
@@ -291,11 +318,17 @@ const statements = {
   createUser: {
     run: (params) => dbOperations.createUser(params.handle, params.secret_key)
   },
+  createTwitterUser: {
+    run: (params) => dbOperations.createTwitterUser(params.handle, params.twitter_id, params.twitter_username, params.twitter_name, params.twitter_profile_image)
+  },
   getUserByHandle: {
     get: (handle) => dbOperations.getUserByHandle(handle)
   },
   getUserById: {
     get: (id) => dbOperations.getUserById(id)
+  },
+  getUserByTwitterId: {
+    get: (twitterId) => dbOperations.getUserByTwitterId(twitterId)
   },
   createQuestion: {
     run: (params) => dbOperations.createQuestion(params.user_id, params.text, params.ip_address)

@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
 
@@ -16,6 +18,7 @@ const userRoutes = require('./routes/users');
 const questionRoutes = require('./routes/questions');
 const answerRoutes = require('./routes/answers');
 const statsRoutes = require('./routes/stats');
+const twitterAuthRoutes = require('./routes/twitter-auth');
 
 // Import database
 const db = require('./utils/database');
@@ -67,6 +70,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Session middleware for Passport
+app.use(session({
+  secret: process.env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Global rate limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -92,6 +107,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/auth', twitterAuthRoutes);
 
 // Apply question rate limiter to ask question endpoint
 app.use('/api/questions/:handle', questionLimiter);
