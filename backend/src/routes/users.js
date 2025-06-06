@@ -7,6 +7,44 @@ const { validate, handleRules, authRules, handleParamRules } = require('../middl
 
 const router = express.Router();
 
+// Get all public users for directory
+router.get('/directory', async (req, res) => {
+  try {
+    global.logger?.log('📁 Fetching user directory');
+    
+    // Get all users with basic info (excluding sensitive data)
+    const users = await new Promise((resolve, reject) => {
+      const sqlite3 = require('sqlite3').verbose();
+      const db = new sqlite3.Database('./data/traderfm.db');
+      
+      db.all(`
+        SELECT 
+          handle, 
+          twitter_username, 
+          twitter_name, 
+          twitter_profile_image,
+          auth_type,
+          created_at,
+          (SELECT COUNT(*) FROM answers WHERE user_id = users.id) as answer_count
+        FROM users 
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+        db.close();
+      });
+    });
+    
+    global.logger?.log(`✅ Found ${users.length} users for directory`);
+    res.json({ users });
+    
+  } catch (error) {
+    global.logger?.error('❌ Directory fetch error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Check if handle exists
 router.get('/check/:handle', handleParamRules, validate, async (req, res) => {
   try {
@@ -94,6 +132,12 @@ router.post('/auth', authRules, validate, async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
+    // Check if user is Twitter-only
+    if (user.auth_type === 'twitter') {
+      global.logger?.log(`❌ User ${handle} is Twitter-only, cannot use secret key auth`);
+      return res.status(401).json({ message: 'This account uses Twitter authentication. Please sign in with Twitter.' });
+    }
+    
     // Verify secret key
     global.logger?.log('🔑 Verifying secret key...');
     const isValid = await bcrypt.compare(secretKey, user.secret_key);
@@ -110,7 +154,8 @@ router.post('/auth', authRules, validate, async (req, res) => {
     res.json({
       message: 'Authentication successful',
       token,
-      handle: user.handle
+      handle: user.handle,
+      authType: user.auth_type
     });
   } catch (error) {
     global.logger?.error('❌ Auth error:', error);
