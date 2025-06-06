@@ -81,13 +81,20 @@ app.use(express.urlencoded({ extended: true }));
 const sessionConfig = {
   secret: process.env.JWT_SECRET || 'your-secret-key',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Need to save uninitialized sessions for OAuth
+  name: 'traderfm.sid', // Custom session name
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Railway handles HTTPS, we receive HTTP internally
     httpOnly: true,
+    sameSite: 'lax', // Important for OAuth redirects
     maxAge: 10 * 60 * 1000 // 10 minutes - only needed during OAuth flow
   }
 };
+
+// Additional proxy configuration for sessions
+if (process.env.NODE_ENV === 'production') {
+  sessionConfig.proxy = true; // Trust the proxy for secure cookies
+}
 
 app.use(session(sessionConfig));
 
