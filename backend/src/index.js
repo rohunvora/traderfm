@@ -69,8 +69,22 @@ console.log('🐦 Twitter API Secret:', process.env.TWITTER_API_SECRET ? 'Set �
 console.log('🔗 Base URL:', process.env.BASE_URL || 'Not set (using defaults)');
 console.log('🔗 Twitter Callback URL:', process.env.TWITTER_CALLBACK_URL || 'Not set (using defaults)');
 
-// Security middleware
-app.use(helmet());
+// Security middleware with updated CSP for Twitter images
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      imgSrc: ["'self'", "data:", "https://pbs.twimg.com", "https://abs.twimg.com"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.FRONTEND_URL || true,
   credentials: true

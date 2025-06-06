@@ -33,16 +33,16 @@ export function AuthProvider({ children }) {
       localStorage.setItem('auth_handle', handle);
       localStorage.setItem('auth_type', authType);
       setUser({ handle, token, authType });
+      
+      // Clean URL
+      window.history.replaceState({}, document.title, '/');
+      
+      // Set a flag to indicate we just authenticated
+      sessionStorage.setItem('justAuthenticated', 'true');
+      sessionStorage.setItem('authHandle', handle);
+      
       toast.success(`Welcome ${handle}!`);
-      
-      // Clean URL and redirect to inbox
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-      
-      // Use a small delay to ensure state is set before navigation
-      setTimeout(() => {
-        window.location.href = `/inbox/${handle}`;
-      }, 100);
+      setLoading(false);
       return;
     }
     
@@ -99,7 +99,8 @@ export function AuthProvider({ children }) {
 
   // Check if user owns a specific handle
   const ownsHandle = (handle) => {
-    return user?.handle === handle;
+    if (!user?.handle || !handle) return false;
+    return user.handle.toLowerCase() === handle.toLowerCase();
   };
 
   const value = {

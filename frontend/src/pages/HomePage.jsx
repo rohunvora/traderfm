@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { userAPI } from '../services/api';
@@ -7,7 +7,21 @@ import Loading from '../components/Loading';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { loginWithTwitter } = useAuth();
+  const { loginWithTwitter, user, isAuthenticated, loading: authLoading } = useAuth();
+  const [redirecting, setRedirecting] = React.useState(false);
+
+  // Handle post-authentication redirect
+  useEffect(() => {
+    const justAuth = sessionStorage.getItem('justAuthenticated');
+    const authHandle = sessionStorage.getItem('authHandle');
+    
+    if (justAuth === 'true' && authHandle && isAuthenticated) {
+      setRedirecting(true);
+      sessionStorage.removeItem('justAuthenticated');
+      sessionStorage.removeItem('authHandle');
+      navigate(`/inbox/${authHandle}`);
+    }
+  }, [isAuthenticated, navigate]);
 
   // Fetch user directory
   const { data: directory, isLoading: directoryLoading } = useQuery({
@@ -15,6 +29,10 @@ export default function HomePage() {
     queryFn: () => userAPI.getDirectory(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  if (authLoading || redirecting) {
+    return <Loading size="lg" className="mt-20" />;
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
