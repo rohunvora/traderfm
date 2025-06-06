@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
@@ -25,8 +27,11 @@ const db = require('./utils/database');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Trust proxy for Railway deployment
-app.set('trust proxy', true);
+// Trust proxy for Railway deployment (specific configuration)
+if (process.env.NODE_ENV === 'production') {
+  // Railway uses specific proxy headers
+  app.set('trust proxy', 1); // Trust first proxy
+}
 
 // Store recent logs in memory for debugging
 const recentLogs = [];
@@ -72,14 +77,43 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Passport middleware (stateless, no sessions)
+// Session middleware - required for Twitter OAuth 1.0a
+const sessionConfig = {
+  secret: process.env.JWT_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+};
+
+// Use SQLite store in production to avoid memory leaks
+if (process.env.NODE_ENV === 'production') {
+  sessionConfig.store = new SQLiteStore({
+    db: 'sessions.db',
+    dir: './data'
+  });
+}
+
+app.use(session(sessionConfig));
+
+// Passport middleware
 app.use(passport.initialize());
+app.use(passport.session());
 
 // Global rate limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP'
+  message: 'Too many requests from this IP',
+  standardHeaders: true, // Return rate limit info in the headers
+  legacyHeaders: false, // Disable the X-RateLimit-* headers
+  // Skip successful requests from rate limiting
+  skipSuccessfulRequests: false,
+  // Use default key generator (req.ip) which respects trust proxy
+  keyGenerator: (req) => req.ip
 });
 app.use('/api/', globalLimiter);
 
@@ -88,6 +122,8 @@ const questionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 3, // limit each IP to 3 questions per minute
   message: 'Too many questions. Please wait before asking again.',
+  standardHeaders: true,
+  legacyHeaders: false,
   skipSuccessfulRequests: false,
   keyGenerator: (req) => {
     // Use IP + handle to rate limit per handle
