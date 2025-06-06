@@ -80,9 +80,6 @@ const init = async () => {
       }
     });
     
-    // Run migrations first to update existing databases
-    await runMigrations(db);
-    
     // Enable foreign keys
     await runAsync('PRAGMA foreign_keys = ON');
     console.log('✅ Foreign keys enabled');
@@ -148,6 +145,9 @@ const init = async () => {
       END
     `);
     console.log('✅ Database triggers created');
+
+    // Run migrations AFTER tables are created to update existing databases
+    await runMigrations(db);
 
     console.log('🎉 Database schema initialized successfully');
   } catch (error) {
