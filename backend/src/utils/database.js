@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const { promisify } = require('util');
+const { runMigrations } = require('./migrations');
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, '../../data');
@@ -78,6 +79,9 @@ const init = async () => {
         resolve();
       }
     });
+    
+    // Run migrations first to update existing databases
+    await runMigrations(db);
     
     // Enable foreign keys
     await runAsync('PRAGMA foreign_keys = ON');

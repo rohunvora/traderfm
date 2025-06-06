@@ -22,7 +22,17 @@ passport.use(new TwitterStrategy({
     const profileImage = profile.photos?.[0]?.value || null;
     
     // Check if user already exists with this Twitter ID
-    let user = await statements.getUserByTwitterId.get(twitterId);
+    let user;
+    try {
+      user = await statements.getUserByTwitterId.get(twitterId);
+    } catch (error) {
+      global.logger?.error('❌ Error checking for existing Twitter user:', error);
+      // If the error is about missing column, the migration hasn't run yet
+      if (error.message?.includes('no such column')) {
+        return done(new Error('Database migration required. Please restart the application.'), null);
+      }
+      throw error;
+    }
     
     if (user) {
       global.logger?.log(`✅ Existing Twitter user found: ${user.handle}`);
@@ -86,14 +96,21 @@ router.get('/twitter', passport.authenticate('twitter'));
 
 // Twitter OAuth callback
 router.get('/twitter/callback', passport.authenticate('twitter', {
-  failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}?error=twitter_auth_failed`
+  failureRedirect: process.env.NODE_ENV === 'production' 
+    ? '/?error=twitter_auth_failed'
+    : `${process.env.FRONTEND_URL || 'http://localhost:3000'}?error=twitter_auth_failed`
 }), (req, res) => {
   try {
     // Generate JWT token
     const token = generateToken(req.user.id, req.user.handle);
     
     // Redirect to frontend with token
-    const redirectUrl = new URL(process.env.FRONTEND_URL || 'http://localhost:3000');
+    // In production on Railway, the frontend and backend are on the same domain
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? '' // Use relative URL in production
+      : (process.env.FRONTEND_URL || 'http://localhost:3000');
+    
+    const redirectUrl = new URL(baseUrl || `${req.protocol}://${req.get('host')}`);
     redirectUrl.searchParams.set('token', token);
     redirectUrl.searchParams.set('handle', req.user.handle);
     redirectUrl.searchParams.set('auth_type', 'twitter');
