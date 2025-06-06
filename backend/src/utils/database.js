@@ -38,6 +38,22 @@ const runAsync = promisify(db.run.bind(db));
 const getAsync = promisify(db.get.bind(db));
 const allAsync = promisify(db.all.bind(db));
 
+// Custom run function that properly handles SQLite3 results
+const runWithResult = (sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({
+          lastID: this.lastID,
+          changes: this.changes
+        });
+      }
+    });
+  });
+};
+
 // Initialize database schema
 const init = async () => {
   try {
@@ -116,7 +132,7 @@ const dbOperations = {
   // User operations
   createUser: async (handle, secretKey) => {
     try {
-      const result = await runAsync(
+      const result = await runWithResult(
         'INSERT INTO users (handle, secret_key) VALUES (?, ?)',
         [handle, secretKey]
       );
@@ -148,7 +164,7 @@ const dbOperations = {
   // Question operations
   createQuestion: async (userId, text, ipAddress) => {
     try {
-      const result = await runAsync(
+      const result = await runWithResult(
         'INSERT INTO questions (user_id, text, ip_address) VALUES (?, ?, ?)',
         [userId, text, ipAddress]
       );
@@ -184,7 +200,7 @@ const dbOperations = {
 
   deleteQuestion: async (id) => {
     try {
-      const result = await runAsync('DELETE FROM questions WHERE id = ?', [id]);
+      const result = await runWithResult('DELETE FROM questions WHERE id = ?', [id]);
       return { changes: result.changes };
     } catch (error) {
       console.error('❌ deleteQuestion error:', error);
@@ -195,7 +211,7 @@ const dbOperations = {
   // Answer operations
   createAnswer: async (questionId, userId, questionText, answerText) => {
     try {
-      const result = await runAsync(
+      const result = await runWithResult(
         'INSERT INTO answers (question_id, user_id, question_text, answer_text) VALUES (?, ?, ?, ?)',
         [questionId, userId, questionText, answerText]
       );
@@ -232,7 +248,7 @@ const dbOperations = {
 
   deleteAnswer: async (id, userId) => {
     try {
-      const result = await runAsync(
+      const result = await runWithResult(
         'DELETE FROM answers WHERE id = ? AND user_id = ?',
         [id, userId]
       );

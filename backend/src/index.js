@@ -23,6 +23,35 @@ const db = require('./utils/database');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Store recent logs in memory for debugging
+const recentLogs = [];
+const maxLogs = 50;
+
+// Custom logger that stores logs
+const logger = {
+  log: (message) => {
+    const timestamp = new Date().toISOString();
+    const logEntry = `${timestamp} ${message}`;
+    console.log(logEntry);
+    recentLogs.push(logEntry);
+    if (recentLogs.length > maxLogs) {
+      recentLogs.shift(); // Remove oldest log
+    }
+  },
+  error: (message, error) => {
+    const timestamp = new Date().toISOString();
+    const logEntry = `${timestamp} ERROR: ${message} ${error ? error.toString() : ''}`;
+    console.error(logEntry);
+    recentLogs.push(logEntry);
+    if (recentLogs.length > maxLogs) {
+      recentLogs.shift();
+    }
+  }
+};
+
+// Make logger available globally
+global.logger = logger;
+
 console.log('🚀 Starting TraderFM server...');
 console.log('📦 Environment:', process.env.NODE_ENV);
 console.log('🔑 JWT_SECRET:', process.env.JWT_SECRET ? 'Set ✅' : 'Missing ❌');
@@ -74,6 +103,15 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     port: PORT
+  });
+});
+
+// Logs endpoint to view recent application logs
+app.get('/api/logs', (req, res) => {
+  res.json({
+    timestamp: new Date().toISOString(),
+    totalLogs: recentLogs.length,
+    logs: recentLogs.slice(-20) // Show last 20 logs
   });
 });
 
