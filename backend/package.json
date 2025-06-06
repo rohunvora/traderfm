@@ -19,7 +19,7 @@
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",
-    "passport-twitter-oauth2": "^2.1.1",
+    "passport-twitter": "^1.0.4",
     "sqlite3": "^5.1.6",
     "uuid": "^9.0.1"
   },
