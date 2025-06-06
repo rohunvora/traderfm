@@ -20,8 +20,9 @@ COPY backend/ ./backend/
 # Build frontend
 RUN cd frontend && npm run build
 
-# Create data directory for SQLite
-RUN mkdir -p backend/data
+# Create data directory for SQLite with proper permissions
+RUN mkdir -p backend/data && \
+    chmod 777 backend/data
 
 # Set environment
 ENV NODE_ENV=production

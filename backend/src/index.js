@@ -3,7 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
@@ -78,6 +77,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session middleware - required for Twitter OAuth 1.0a
+// Using memory store with short TTL since sessions are only used during OAuth flow
 const sessionConfig = {
   secret: process.env.JWT_SECRET || 'your-secret-key',
   resave: false,
@@ -85,17 +85,9 @@ const sessionConfig = {
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 10 * 60 * 1000 // 10 minutes - only needed during OAuth flow
   }
 };
-
-// Use SQLite store in production to avoid memory leaks
-if (process.env.NODE_ENV === 'production') {
-  sessionConfig.store = new SQLiteStore({
-    db: 'sessions.db',
-    dir: './data'
-  });
-}
 
 app.use(session(sessionConfig));
 
