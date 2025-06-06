@@ -5,6 +5,16 @@ const { validate, handleParamRules, idParamRules } = require('../middleware/vali
 
 const router = express.Router();
 
+// Helper function to transform snake_case to camelCase
+const transformAnswer = (answer) => ({
+  id: answer.id,
+  questionId: answer.question_id,
+  userId: answer.user_id,
+  questionText: answer.question_text,
+  answerText: answer.answer_text,
+  createdAt: answer.created_at
+});
+
 // Get answers by handle (public)
 router.get('/:handle', handleParamRules, validate, async (req, res) => {
   try {
@@ -23,8 +33,11 @@ router.get('/:handle', handleParamRules, validate, async (req, res) => {
     const answers = await statements.getAnswersByUserId.all(user.id, limit, offset);
     const totalCount = await statements.countAnswersByUserId.get(user.id);
     
+    // Transform to camelCase
+    const transformedAnswers = answers.map(transformAnswer);
+    
     res.json({
-      answers,
+      answers: transformedAnswers,
       total: totalCount.count,
       page,
       pages: Math.ceil(totalCount.count / limit)
