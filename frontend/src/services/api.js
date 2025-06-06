@@ -41,6 +41,7 @@ export const userAPI = {
   checkHandle: (handle) => api.get(`/users/check/${handle}`),
   createHandle: (handle) => api.post('/users/create', { handle }),
   authenticate: (handle, secretKey) => api.post('/users/auth', { handle, secretKey }),
+  getDirectory: () => api.get('/users/directory'),
 };
 
 // Questions API
