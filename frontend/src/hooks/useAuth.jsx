@@ -35,9 +35,14 @@ export function AuthProvider({ children }) {
       setUser({ handle, token, authType });
       toast.success(`Welcome ${handle}!`);
       
-      // Redirect to inbox after cleaning URL
-      window.history.replaceState({}, document.title, `/inbox`);
-      window.location.href = '/inbox';
+      // Clean URL and redirect to inbox
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // Use a small delay to ensure state is set before navigation
+      setTimeout(() => {
+        window.location.href = `/inbox/${handle}`;
+      }, 100);
       return;
     }
     

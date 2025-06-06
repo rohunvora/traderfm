@@ -324,6 +324,31 @@ const dbOperations = {
     }
   },
 
+  // Get all users for directory
+  getAllUsers: async () => {
+    try {
+      return await allAsync(`
+        SELECT 
+          users.id,
+          users.handle, 
+          users.twitter_username, 
+          users.twitter_name, 
+          users.twitter_profile_image,
+          users.auth_type,
+          users.created_at,
+          COUNT(DISTINCT answers.id) as answer_count
+        FROM users 
+        LEFT JOIN answers ON users.id = answers.user_id
+        GROUP BY users.id
+        ORDER BY users.created_at DESC 
+        LIMIT 50
+      `);
+    } catch (error) {
+      console.error('❌ getAllUsers error:', error);
+      throw error;
+    }
+  },
+
   // Transaction helper
   runTransaction: async (callback) => {
     await runAsync('BEGIN TRANSACTION');
@@ -380,6 +405,9 @@ const statements = {
   },
   getUserStats: {
     get: (userId1, userId2) => dbOperations.getUserStats(userId1)
+  },
+  getAllUsers: {
+    all: () => dbOperations.getAllUsers()
   }
 };
 
