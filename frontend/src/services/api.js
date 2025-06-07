@@ -27,12 +27,28 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    console.error('API Error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+      method: error.config?.method
+    });
+    
     if (error.response?.status === 401) {
       // Clear auth and redirect to home
       localStorage.removeItem('auth_token');
       window.location.href = '/';
     }
-    return Promise.reject(error.response?.data || error);
+    
+    // Create a proper error object with all details
+    const errorObj = {
+      message: error.response?.data?.message || error.message || 'Network error',
+      status: error.response?.status,
+      data: error.response?.data,
+      ...error.response?.data // Spread any additional error fields
+    };
+    
+    return Promise.reject(errorObj);
   }
 );
 

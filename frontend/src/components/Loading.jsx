@@ -1,14 +1,26 @@
 import React from 'react';
 
-export default function Loading({ size = 'md', className = '' }) {
+const loadingMessages = [
+  "Loading the good stuff...",
+  "Fetching insights...",
+  "Gathering wisdom...",
+  "Almost there...",
+  "Preparing your content...",
+  "Just a moment...",
+  "Loading amazing things..."
+];
+
+export default function Loading({ size = 'md', className = '', showMessage = false }) {
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-8 h-8',
     lg: 'w-12 h-12',
   };
 
+  const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+
   return (
-    <div className={`flex justify-center items-center ${className}`}>
+    <div className={`flex flex-col justify-center items-center ${className}`}>
       <div className={`${sizeClasses[size]} animate-spin`}>
         <svg className="w-full h-full" viewBox="0 0 24 24">
           <circle 
@@ -27,6 +39,9 @@ export default function Loading({ size = 'md', className = '' }) {
           />
         </svg>
       </div>
+      {showMessage && size === 'lg' && (
+        <p className="mt-4 text-gray-600 animate-pulse">{randomMessage}</p>
+      )}
     </div>
   );
 }
@@ -34,17 +49,19 @@ export default function Loading({ size = 'md', className = '' }) {
 export function LoadingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loading size="lg" />
+      <Loading size="lg" showMessage />
     </div>
   );
 }
 
-export function LoadingOverlay({ message = 'Loading...' }) {
+export function LoadingOverlay({ message }) {
+  const defaultMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-3">
         <Loading size="md" />
-        <p className="text-gray-600">{message}</p>
+        <p className="text-gray-600">{message || defaultMessage}</p>
       </div>
     </div>
   );
