@@ -4,8 +4,13 @@ const fs = require('fs');
 const { promisify } = require('util');
 const { runMigrations } = require('./migrations');
 
+// Determine data directory based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const dataDir = isProduction 
+  ? '/data'  // Railway volume mount point
+  : path.join(__dirname, '../../data'); // Local development
+
 // Ensure data directory exists
-const dataDir = path.join(__dirname, '../../data');
 console.log('📁 Database directory:', dataDir);
 
 try {
