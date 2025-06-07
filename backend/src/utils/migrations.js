@@ -185,6 +185,64 @@ const migrations = [
         throw error;
       }
     }
+  },
+  {
+    version: 3,
+    description: 'Add updated_at column to answers table',
+    up: async (db) => {
+      console.log('🔄 Running migration 3: Add updated_at column to answers table...');
+      
+      // Check if answers table exists
+      const tableExists = await new Promise((resolve, reject) => {
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='answers'", (err, row) => {
+          if (err) reject(err);
+          else resolve(!!row);
+        });
+      });
+      
+      if (!tableExists) {
+        console.log('✓ Answers table does not exist yet, skipping migration');
+        return;
+      }
+      
+      // Check if column already exists
+      const tableInfo = await new Promise((resolve, reject) => {
+        db.all("PRAGMA table_info(answers)", (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        });
+      });
+      
+      const columnNames = tableInfo.map(col => col.name);
+      
+      if (columnNames.includes('updated_at')) {
+        console.log('✓ updated_at column already exists, skipping migration');
+        return;
+      }
+      
+      // Add updated_at column
+      await new Promise((resolve, reject) => {
+        db.run('ALTER TABLE answers ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP', (err) => {
+          if (err) {
+            console.error('❌ Failed to add updated_at column:', err);
+            reject(err);
+          } else {
+            console.log('✅ Added updated_at column');
+            resolve();
+          }
+        });
+      });
+      
+      // Set updated_at to created_at for existing records
+      await new Promise((resolve, reject) => {
+        db.run('UPDATE answers SET updated_at = created_at WHERE updated_at IS NULL', (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      console.log('✅ Migration 3 completed');
+    }
   }
 ];
 
