@@ -12,7 +12,41 @@ const transformAnswer = (answer) => ({
   userId: answer.user_id,
   questionText: answer.question_text,
   answerText: answer.answer_text,
-  createdAt: answer.created_at
+  createdAt: answer.created_at,
+  updatedAt: answer.updated_at
+});
+
+// Get a single answer by ID (public)
+router.get('/single/:id', idParamRules, validate, async (req, res) => {
+  try {
+    const answerId = parseInt(req.params.id);
+    
+    // Get the answer with user info
+    const answer = await statements.getAnswerById.get(answerId);
+    
+    if (!answer) {
+      return res.status(404).json({ message: 'Answer not found' });
+    }
+    
+    // Get user info
+    const user = await statements.getUserById.get(answer.user_id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Transform and add user info
+    const transformedAnswer = transformAnswer(answer);
+    transformedAnswer.userHandle = user.handle;
+    transformedAnswer.userName = user.twitter_name;
+    transformedAnswer.userProfileImage = user.twitter_profile_image;
+    transformedAnswer.userAuthType = user.auth_type;
+    
+    res.json(transformedAnswer);
+  } catch (error) {
+    console.error('Get single answer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Get answers by handle (public)
@@ -69,6 +103,35 @@ router.delete('/:id', authenticate, idParamRules, validate, async (req, res) => 
     res.json({ message: 'Answer deleted successfully' });
   } catch (error) {
     console.error('Delete answer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Edit an answer (requires auth)
+router.put('/:id', authenticate, idParamRules, validate, async (req, res) => {
+  try {
+    const answerId = parseInt(req.params.id);
+    const { answerText } = req.body;
+    
+    // Validate answer text
+    if (!answerText || answerText.trim().length === 0) {
+      return res.status(400).json({ message: 'Answer text is required' });
+    }
+    
+    if (answerText.length > 1000) {
+      return res.status(400).json({ message: 'Answer must be less than 1000 characters' });
+    }
+    
+    // Update answer (only if user owns it)
+    const result = await statements.updateAnswer.run(answerText.trim(), answerId, req.user.id);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ message: 'Answer not found or unauthorized' });
+    }
+    
+    res.json({ message: 'Answer updated successfully' });
+  } catch (error) {
+    console.error('Update answer error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

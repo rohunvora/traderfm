@@ -128,6 +128,7 @@ const init = async () => {
         question_text TEXT NOT NULL,
         answer_text TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -289,6 +290,15 @@ const dbOperations = {
     }
   },
 
+  getAnswerById: async (id) => {
+    try {
+      return await getAsync('SELECT * FROM answers WHERE id = ?', [id]);
+    } catch (error) {
+      console.error('❌ getAnswerById error:', error);
+      throw error;
+    }
+  },
+
   countAnswersByUserId: async (userId) => {
     try {
       return await getAsync(
@@ -310,6 +320,20 @@ const dbOperations = {
       return { changes: result.changes };
     } catch (error) {
       console.error('❌ deleteAnswer error:', error);
+      throw error;
+    }
+  },
+
+  // Update answer
+  updateAnswer: async (answerText, id, userId) => {
+    try {
+      const result = await runWithResult(
+        'UPDATE answers SET answer_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+        [answerText, id, userId]
+      );
+      return { changes: result.changes };
+    } catch (error) {
+      console.error('❌ updateAnswer error:', error);
       throw error;
     }
   },
@@ -468,11 +492,17 @@ const statements = {
   getAnswersByUserId: {
     all: (userId, limit, offset) => dbOperations.getAnswersByUserId(userId, limit, offset)
   },
+  getAnswerById: {
+    get: (id) => dbOperations.getAnswerById(id)
+  },
   countAnswersByUserId: {
     get: (userId) => dbOperations.countAnswersByUserId(userId)
   },
   deleteAnswer: {
     run: (id, userId) => dbOperations.deleteAnswer(id, userId)
+  },
+  updateAnswer: {
+    run: (answerText, id, userId) => dbOperations.updateAnswer(answerText, id, userId)
   },
   getUserStats: {
     get: (userId1, userId2) => dbOperations.getUserStats(userId1)
