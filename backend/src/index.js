@@ -19,9 +19,11 @@ const questionRoutes = require('./routes/questions');
 const answerRoutes = require('./routes/answers');
 const statsRoutes = require('./routes/stats');
 const twitterAuthRoutes = require('./routes/twitter-auth');
+const adminRoutes = require('./routes/admin');
 
 // Import database
 const db = require('./utils/database');
+const { statements } = require('./utils/database');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -172,6 +174,36 @@ app.use('/api/users', userRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Activity endpoint for real-time updates
+app.get('/api/activity', async (req, res) => {
+  try {
+    const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 30000); // Last 30 seconds by default
+    
+    // Get recent questions, answers, and new users
+    const [recentQuestions, recentAnswers, recentUsers] = await Promise.all([
+      statements.getRecentQuestions.all(since.toISOString()),
+      statements.getRecentAnswers.all(since.toISOString()),
+      statements.getRecentUsers.all(since.toISOString())
+    ]);
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      questions: recentQuestions || [],
+      answers: recentAnswers || [],
+      users: recentUsers || []
+    });
+  } catch (error) {
+    console.error('Activity endpoint error:', error);
+    res.json({ 
+      timestamp: new Date().toISOString(),
+      questions: [], 
+      answers: [], 
+      users: [] 
+    });
+  }
+});
 
 // Apply auth-specific rate limiter to Twitter auth routes
 app.use('/api/auth', authLimiter, twitterAuthRoutes);
@@ -220,6 +252,18 @@ app.get('/api/debug', async (req, res) => {
     const dataDir = path.join(__dirname, '../data');
     const dbPath = path.join(dataDir, 'traderfm.db');
     
+    // Get database file stats
+    let dbStats = null;
+    if (fs.existsSync(dbPath)) {
+      const stats = fs.statSync(dbPath);
+      dbStats = {
+        sizeBytes: stats.size,
+        sizeMB: (stats.size / (1024 * 1024)).toFixed(2),
+        created: stats.birthtime,
+        modified: stats.mtime
+      };
+    }
+    
     const debugInfo = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
@@ -233,7 +277,11 @@ app.get('/api/debug', async (req, res) => {
       database: {
         path: dbPath,
         exists: fs.existsSync(dbPath),
-        size: fs.existsSync(dbPath) ? fs.statSync(dbPath).size : 0
+        stats: dbStats
+      },
+      volume: {
+        railwayVolumePath: process.env.RAILWAY_VOLUME_MOUNT_PATH || 'Not configured',
+        isUsingVolume: !!process.env.RAILWAY_VOLUME_MOUNT_PATH
       },
       workingDirectory: process.cwd(),
       platform: process.platform,

@@ -348,6 +348,73 @@ const dbOperations = {
     }
   },
 
+  // Get recent questions
+  getRecentQuestions: async (since) => {
+    try {
+      return await allAsync(`
+        SELECT 
+          q.id,
+          q.text,
+          q.created_at,
+          u.handle as user_handle
+        FROM questions q
+        JOIN users u ON q.user_id = u.id
+        WHERE q.created_at > ?
+        ORDER BY q.created_at DESC
+        LIMIT 10
+      `, [since]);
+    } catch (error) {
+      console.error('❌ getRecentQuestions error:', error);
+      throw error;
+    }
+  },
+
+  // Get recent answers
+  getRecentAnswers: async (since) => {
+    try {
+      return await allAsync(`
+        SELECT 
+          a.id,
+          a.question_text,
+          a.answer_text,
+          a.created_at,
+          u.handle as user_handle,
+          u.twitter_profile_image
+        FROM answers a
+        JOIN users u ON a.user_id = u.id
+        WHERE a.created_at > ?
+        ORDER BY a.created_at DESC
+        LIMIT 10
+      `, [since]);
+    } catch (error) {
+      console.error('❌ getRecentAnswers error:', error);
+      throw error;
+    }
+  },
+
+  // Get recent users
+  getRecentUsers: async (since) => {
+    try {
+      return await allAsync(`
+        SELECT 
+          id,
+          handle,
+          twitter_username,
+          twitter_name,
+          twitter_profile_image,
+          auth_type,
+          created_at
+        FROM users
+        WHERE created_at > ?
+        ORDER BY created_at DESC
+        LIMIT 10
+      `, [since]);
+    } catch (error) {
+      console.error('❌ getRecentUsers error:', error);
+      throw error;
+    }
+  },
+
   // Transaction helper
   runTransaction: async (callback) => {
     await runAsync('BEGIN TRANSACTION');
@@ -407,6 +474,15 @@ const statements = {
   },
   getAllUsers: {
     all: () => dbOperations.getAllUsers()
+  },
+  getRecentQuestions: {
+    all: (since) => dbOperations.getRecentQuestions(since)
+  },
+  getRecentAnswers: {
+    all: (since) => dbOperations.getRecentAnswers(since)
+  },
+  getRecentUsers: {
+    all: (since) => dbOperations.getRecentUsers(since)
   }
 };
 
