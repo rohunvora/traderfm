@@ -1,7 +1,4 @@
 const { body, param, validationResult } = require('express-validator');
-const Filter = require('bad-words');
-
-const filter = new Filter();
 
 // Custom validation middleware
 const validate = (req, res, next) => {
@@ -55,13 +52,6 @@ const questionRules = [
       // Check if it contains actual text
       if (!/[a-zA-Z0-9]/.test(value)) {
         throw new Error('Question must contain some text');
-      }
-      return true;
-    })
-    .custom((value) => {
-      // Check for profanity
-      if (filter.isProfane(value)) {
-        throw new Error('Please keep your question respectful');
       }
       return true;
     })
