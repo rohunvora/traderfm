@@ -17,13 +17,19 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState([]);
 
   // Check if handle exists
-  const { data: profileData, isLoading: checkingHandle } = useQuery({
+  const { data: profileData, isLoading: checkingHandle, error: profileError } = useQuery({
     queryKey: ['handle', handle],
     queryFn: () => userAPI.checkHandle(handle),
-    retry: false,
-    onError: () => {
-      toast.error('This handle does not exist');
-      navigate('/');
+    retry: 1,
+    onError: (error) => {
+      console.error('Profile check error:', error);
+      // Only navigate away for 404 errors
+      if (error.status === 404 || error.message === 'Handle not found') {
+        toast.error(`Hmm, @${handle} hasn't joined yet. Maybe invite them? 🤔`);
+        navigate('/');
+      } else {
+        toast.error('Having trouble loading this page. Try refreshing?');
+      }
     },
   });
 
@@ -50,8 +56,6 @@ export default function ProfilePage() {
       }
     },
   });
-
-
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -84,7 +88,6 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto">
 
-
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -113,80 +116,103 @@ export default function ProfilePage() {
           {isOwner && (
             <button
               onClick={() => navigate(`/inbox/${handle}`)}
-              className="text-blue-500 hover:text-blue-600 font-medium"
+              className="text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1"
             >
-              Go to Inbox →
+              View inbox
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           )}
         </div>
         
         <p className="text-gray-600 mb-4">
-          Ask me anything about trading, markets, or investment strategies!
+          {isOwner 
+            ? "This is your public page. Share it to receive anonymous questions!"
+            : `Got a burning question? Ask @${handle} anonymously – they can't see who you are.`
+          }
         </p>
 
-        {/* Ask question form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <div className="relative">
-              <textarea
-                value={question}
-                onChange={(e) => {
-                  setQuestion(e.target.value);
-                  setErrors([]);
-                }}
-                placeholder="What would you like to know?"
-                className="w-full p-4 border-2 border-gray-200 rounded-lg resize-none focus:outline-none focus:border-blue-400 transition"
-                rows={3}
-                maxLength={280}
-                disabled={askQuestionMutation.isLoading}
-              />
-              <div className="absolute bottom-2 right-2 text-sm text-gray-400">
-                {question.length}/280
+        {/* Ask question form - only show if not owner */}
+        {!isOwner && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <div className="relative">
+                <textarea
+                  value={question}
+                  onChange={(e) => {
+                    setQuestion(e.target.value);
+                    setErrors([]);
+                  }}
+                  placeholder="Ask your question here... Be specific to get the best answer!"
+                  className="w-full p-4 border-2 border-gray-200 rounded-lg resize-none focus:outline-none focus:border-blue-400 transition"
+                  rows={3}
+                  maxLength={280}
+                  disabled={askQuestionMutation.isLoading}
+                />
+                <div className="absolute bottom-2 right-2 text-sm text-gray-400">
+                  {question.length}/280
+                </div>
               </div>
+              
+              {errors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {errors.map((error, idx) => (
+                    <p key={idx} className="text-red-500 text-sm">{error}</p>
+                  ))}
+                </div>
+              )}
             </div>
-            
-            {errors.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {errors.map((error, idx) => (
-                  <p key={idx} className="text-red-500 text-sm">{error}</p>
-                ))}
-              </div>
-            )}
-          </div>
 
-          <button
-            type="submit"
-            disabled={askQuestionMutation.isLoading || !question.trim()}
-            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transform hover:scale-105 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {askQuestionMutation.isLoading ? 'Sending...' : 'Send Anonymous Question'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={askQuestionMutation.isLoading || !question.trim()}
+              className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transform hover:scale-105 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none active-press"
+            >
+              {askQuestionMutation.isLoading ? 'Sending...' : 'Ask Your Question →'}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Answers section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-bold mb-6">
-          Recent Answers ({totalAnswers})
+          {totalAnswers === 0 
+            ? "Questions & Answers" 
+            : `${totalAnswers} Public ${totalAnswers === 1 ? 'Answer' : 'Answers'}`
+          }
         </h2>
 
         {answers.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-2">No answers yet</p>
-            <p className="text-sm text-gray-400">Be the first to ask something!</p>
+            <div className="text-4xl mb-3">💭</div>
+            <p className="text-gray-500 mb-2">
+              {isOwner ? "No questions answered yet" : "No answers yet"}
+            </p>
+            <p className="text-sm text-gray-400">
+              {isOwner 
+                ? "Share your page link to start receiving questions!" 
+                : "Be brave – ask the first question!"
+              }
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {answers.map((answer) => (
-              <div key={answer.id} className="border-l-4 border-blue-100 pl-4 py-2">
+            {answers.map((answer, index) => (
+              <div 
+                key={answer.id} 
+                className="border-l-4 border-blue-100 pl-4 py-2 hover-lift"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <p className="text-gray-600 mb-2">
-                  <span className="font-semibold">Q:</span> {answer.questionText}
+                  <span className="font-semibold text-gray-400">Anonymous asked:</span> {answer.questionText}
                 </p>
                 <p className="text-gray-900">
-                  <span className="font-semibold">A:</span> {answer.answerText}
+                  <span className="font-semibold text-blue-600">@{handle}:</span> {answer.answerText}
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
-                  {format(new Date(answer.createdAt), 'MMM d, yyyy h:mm a')}
+                  {format(new Date(answer.createdAt), 'MMM d, yyyy · h:mm a')}
                 </p>
               </div>
             ))}
@@ -195,26 +221,36 @@ export default function ProfilePage() {
       </div>
 
       {/* Share section */}
-      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-        <p className="text-sm text-gray-600 text-center mb-2">
-          Share this page to get more questions:
+      <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+        <p className="text-sm font-medium text-gray-700 text-center mb-2">
+          {isOwner ? "📤 Your unique link" : "🔗 Share this trader's page"}
         </p>
         <div className="flex items-center justify-center gap-2">
-          <code className="bg-white px-3 py-1 rounded border text-sm">{shareUrl}</code>
+          <code className="bg-white px-3 py-1 rounded border text-sm font-mono">{shareUrl}</code>
           <button
-            onClick={() => {
+            onClick={(event) => {
               navigator.clipboard.writeText(shareUrl);
-              toast.success('Link copied!');
+              toast.success('Copied to clipboard! 🎉');
+              
+              // Visual feedback
+              const btn = event.currentTarget;
+              btn.classList.add('animate-pulse');
+              setTimeout(() => btn.classList.remove('animate-pulse'), 1000);
             }}
-            className="text-blue-500 hover:text-blue-600"
+            className="text-blue-500 hover:text-blue-600 active-press"
+            title="Copy link"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </button>
         </div>
+        {isOwner && (
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Post this on Twitter, share in group chats, or add to your bio
+          </p>
+        )}
       </div>
-
 
     </div>
   );

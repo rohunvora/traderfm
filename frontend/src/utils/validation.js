@@ -3,30 +3,30 @@ export const validateHandle = (handle) => {
   const errors = [];
   
   if (!handle || !handle.trim()) {
-    errors.push('Handle is required');
+    errors.push('Choose a handle to get started');
     return errors;
   }
   
   if (handle.length < 3) {
-    errors.push('Handle must be at least 3 characters');
+    errors.push('Handles need at least 3 characters');
   }
   
   if (handle.length > 20) {
-    errors.push('Handle must be 20 characters or less');
+    errors.push('Keep it under 20 characters');
   }
   
   if (!/^[a-z0-9]+$/.test(handle)) {
-    errors.push('Handle can only contain lowercase letters and numbers');
+    errors.push('Use only lowercase letters and numbers');
   }
   
   if (/^\d+$/.test(handle)) {
-    errors.push('Handle cannot be only numbers');
+    errors.push('Mix in some letters with those numbers');
   }
   
   // Reserved handles
   const reserved = ['api', 'admin', 'inbox', 'login', 'signup', 'about', 'help', 'support'];
   if (reserved.includes(handle.toLowerCase())) {
-    errors.push('This handle is reserved');
+    errors.push('That handle is reserved – try another');
   }
   
   return errors;
@@ -37,26 +37,26 @@ export const validateQuestion = (text) => {
   const errors = [];
   
   if (!text || !text.trim()) {
-    errors.push('Please type a question');
+    errors.push('Type your question first');
     return errors;
   }
   
   if (text.length < 5) {
-    errors.push('Question must be at least 5 characters');
+    errors.push('Add a bit more detail (5+ characters)');
   }
   
   if (text.length > 280) {
-    errors.push('Question must be 280 characters or less');
+    errors.push('Keep it under 280 characters');
   }
   
   // Check if it's just repeated characters
   if (/^(.)\1+$/.test(text.trim())) {
-    errors.push('Please ask a real question');
+    errors.push('Ask a real question – we know you\'re curious!');
   }
   
   // Check if it's just spaces and punctuation
   if (!/[a-zA-Z0-9]/.test(text)) {
-    errors.push('Question must contain some text');
+    errors.push('Add some actual words to your question');
   }
   
   return errors;
@@ -67,12 +67,12 @@ export const validateAnswer = (text) => {
   const errors = [];
   
   if (!text || !text.trim()) {
-    errors.push('Answer cannot be empty');
+    errors.push('Share your thoughts – even a short answer helps');
     return errors;
   }
   
   if (text.length > 1000) {
-    errors.push('Answer must be 1000 characters or less');
+    errors.push('Great insights! But keep it under 1000 characters');
   }
   
   return errors;

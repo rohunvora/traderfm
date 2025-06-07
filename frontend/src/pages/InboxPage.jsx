@@ -26,7 +26,7 @@ export default function InboxPage() {
     // If user is not authenticated for this handle, redirect to home
     if (!ownsHandle(handle)) {
       console.log('Auth check failed:', { userHandle: user?.handle, pageHandle: handle });
-      toast.error('Please sign in to access your inbox');
+      toast.error('This inbox belongs to someone else. Sign in to view yours!');
       navigate('/');
     }
   }, [handle, ownsHandle, navigate, authLoading, user]);
@@ -57,10 +57,10 @@ export default function InboxPage() {
       
       setAnswer('');
       setAnsweringId(null);
-      toast.success('Answer posted!');
+      toast.success('Answer published! Your insight is now live 🎯');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to post answer');
+      toast.error(error.message || 'Could not publish answer. Please try again.');
     },
   });
 
@@ -70,7 +70,7 @@ export default function InboxPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['questions', handle]);
       queryClient.invalidateQueries(['stats', handle]);
-      toast.success('Question deleted');
+      toast.success('Question removed ��️');
     },
   });
 
@@ -97,65 +97,93 @@ export default function InboxPage() {
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Inbox for @{handle}</h1>
+          <h1 className="text-2xl font-bold">Your Question Hub</h1>
           <button
             onClick={() => navigate(`/u/${handle}`)}
-            className="text-blue-500 hover:text-blue-600 font-medium"
+            className="text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1"
           >
-            View public page →
+            View your public page
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
           </button>
         </div>
 
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-gray-800">{stats.totalQuestions}</p>
-              <p className="text-sm text-gray-600">Total Questions</p>
+              <p className="text-sm text-gray-600">Questions received</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-gray-800">{stats.totalAnswers}</p>
-              <p className="text-sm text-gray-600">Answered</p>
+              <p className="text-sm text-gray-600">Answers shared</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-gray-800">{questions.length}</p>
-              <p className="text-sm text-gray-600">Pending</p>
+              <p className="text-sm text-gray-600">Awaiting answer</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Share reminder */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
         <p className="text-sm text-blue-700">
-          <strong>Get more questions!</strong> Share your link:{' '}
-          <code className="bg-white px-2 py-1 rounded ml-1">
+          <strong>💡 Pro tip:</strong> More shares = more questions! Your unique link:{' '}
+          <code className="bg-white px-2 py-1 rounded ml-1 font-mono text-xs">
             {window.location.origin}/u/{handle}
           </code>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/u/${handle}`);
+              toast.success('Link copied! Share it everywhere 🚀');
+            }}
+            className="ml-2 text-blue-600 hover:text-blue-700 underline text-xs"
+          >
+            Copy
+          </button>
         </p>
       </div>
 
       {/* Questions */}
       {questions.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-2xl mb-2">📭</p>
-          <p className="text-gray-500 mb-2">No new questions</p>
-          <p className="text-sm text-gray-400">Share your link to get started!</p>
+          <p className="text-5xl mb-3 animate-bounce">📭</p>
+          <p className="text-gray-700 font-semibold mb-2">Your inbox is empty</p>
+          <p className="text-sm text-gray-500 mb-4">Questions will appear here when people ask them</p>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/u/${handle}`);
+              toast.success('Link copied! Now share it 🎉');
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 active-press"
+          >
+            Copy your link to share
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-700">
-            {questions.length} unanswered question{questions.length !== 1 && 's'}
+            {questions.length === 1 
+              ? '1 question waiting for your wisdom' 
+              : `${questions.length} questions waiting for your wisdom`
+            }
           </h2>
 
           {questions.map((q) => (
             <div key={q.id} className="bg-white rounded-lg shadow-sm p-6 transition hover:shadow-md">
               <div className="flex justify-between items-start mb-4">
-                <p className="text-gray-800 flex-1">{q.text}</p>
+                <p className="text-gray-800 flex-1 text-lg">{q.text}</p>
                 <button
-                  onClick={() => deleteMutation.mutate(q.id)}
+                  onClick={() => {
+                    if (window.confirm('Delete this question? This cannot be undone.')) {
+                      deleteMutation.mutate(q.id);
+                    }
+                  }}
                   disabled={deleteMutation.isLoading}
-                  className="ml-4 text-red-500 hover:text-red-600"
+                  className="ml-4 text-gray-400 hover:text-red-500 transition"
                   title="Delete question"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +193,7 @@ export default function InboxPage() {
               </div>
 
               <p className="text-xs text-gray-400 mb-4">
-                Asked {format(new Date(q.createdAt), 'MMM d, h:mm a')}
+                Asked {format(new Date(q.createdAt), 'MMM d · h:mm a')}
               </p>
 
               {answeringId === q.id ? (
@@ -176,7 +204,7 @@ export default function InboxPage() {
                       setAnswer(e.target.value);
                       setErrors([]);
                     }}
-                    placeholder="Type your answer..."
+                    placeholder="Share your insights... Be helpful, honest, and specific!"
                     className="w-full p-3 border-2 border-blue-400 rounded-lg resize-none focus:outline-none focus:border-blue-500"
                     rows={3}
                     autoFocus
@@ -195,9 +223,9 @@ export default function InboxPage() {
                     <button
                       onClick={() => handleAnswer(q.id)}
                       disabled={answerMutation.isLoading || !answer.trim()}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed active-press"
                     >
-                      {answerMutation.isLoading ? 'Posting...' : 'Post Answer'}
+                      {answerMutation.isLoading ? 'Publishing...' : 'Publish Answer'}
                     </button>
                     <button
                       onClick={() => {
@@ -206,7 +234,7 @@ export default function InboxPage() {
                         setErrors([]);
                       }}
                       disabled={answerMutation.isLoading}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 active-press"
                     >
                       Cancel
                     </button>
@@ -214,10 +242,13 @@ export default function InboxPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setAnsweringId(q.id)}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
+                  onClick={() => {
+                    setAnsweringId(q.id);
+                    // Auto-focus will happen due to autoFocus prop on textarea
+                  }}
+                  className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition active-press font-medium"
                 >
-                  Answer
+                  Write Answer →
                 </button>
               )}
             </div>

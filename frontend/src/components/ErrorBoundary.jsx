@@ -23,11 +23,11 @@ class ErrorBoundary extends React.Component {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h1 className="text-xl font-semibold">Something went wrong</h1>
+              <h1 className="text-xl font-semibold">Oops! Something went sideways</h1>
             </div>
             
             <p className="text-gray-600 mb-4">
-              We're sorry, but something unexpected happened. Please try refreshing the page.
+              Don't worry, it happens to the best of us. Let's get you back on track.
             </p>
             
             {process.env.NODE_ENV === 'development' && this.state.error && (
@@ -43,9 +43,9 @@ class ErrorBoundary extends React.Component {
             
             <button
               onClick={() => window.location.reload()}
-              className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition"
+              className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition active-press"
             >
-              Refresh Page
+              Refresh & Try Again
             </button>
           </div>
         </div>

@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
     const error = urlParams.get('error');
     
     if (error) {
-      toast.error('Twitter authentication failed');
+      toast.error('Twitter sign-in hit a snag. Try again?');
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
       setLoading(false);
@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
       sessionStorage.setItem('justAuthenticated', 'true');
       sessionStorage.setItem('authHandle', handle);
       
-      toast.success(`Welcome ${handle}!`);
+      toast.success(`Welcome aboard, @${handle}! 🎉`);
       setLoading(false);
       return;
     }
@@ -68,11 +68,11 @@ export function AuthProvider({ children }) {
         localStorage.setItem('auth_handle', handle);
         localStorage.setItem('auth_type', 'secret_key');
         setUser({ handle, token: response.token, authType: 'secret_key' });
-        toast.success('Successfully authenticated!');
+        toast.success('You\'re in! Let\'s get some questions 🚀');
         return true;
       }
     } catch (error) {
-      toast.error(error.message || 'Invalid credentials');
+      toast.error(error.message || 'Hmm, that didn\'t work. Check your credentials?');
       return false;
     }
   };
@@ -94,7 +94,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('auth_handle');
     localStorage.removeItem('auth_type');
     setUser(null);
-    toast.success('Logged out successfully');
+    toast.success('Signed out. See you soon! 👋');
   };
 
   // Check if user owns a specific handle
