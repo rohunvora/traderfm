@@ -243,6 +243,56 @@ const migrations = [
       
       console.log('✅ Migration 3 completed');
     }
+  },
+  {
+    version: 4,
+    description: 'Add telegram_chat_id column to users table for notifications',
+    up: async (db) => {
+      console.log('🔄 Running migration 4: Add telegram_chat_id column to users table...');
+      
+      // Check if users table exists
+      const tableExists = await new Promise((resolve, reject) => {
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (err, row) => {
+          if (err) reject(err);
+          else resolve(!!row);
+        });
+      });
+      
+      if (!tableExists) {
+        console.log('✓ Users table does not exist yet, skipping migration');
+        return;
+      }
+      
+      // Check if column already exists
+      const tableInfo = await new Promise((resolve, reject) => {
+        db.all("PRAGMA table_info(users)", (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        });
+      });
+      
+      const columnNames = tableInfo.map(col => col.name);
+      
+      if (columnNames.includes('telegram_chat_id')) {
+        console.log('✓ telegram_chat_id column already exists, skipping migration');
+        return;
+      }
+      
+      // Add telegram_chat_id column
+      await new Promise((resolve, reject) => {
+        db.run('ALTER TABLE users ADD COLUMN telegram_chat_id TEXT', (err) => {
+          if (err) {
+            console.error('❌ Failed to add telegram_chat_id column:', err);
+            reject(err);
+          } else {
+            console.log('✅ Added telegram_chat_id column');
+            resolve();
+          }
+        });
+      });
+      
+      console.log('✅ Migration 4 completed');
+    }
   }
 ];
 

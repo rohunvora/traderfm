@@ -19,6 +19,7 @@ const questionRoutes = require('./routes/questions');
 const answerRoutes = require('./routes/answers');
 const statsRoutes = require('./routes/stats');
 const twitterAuthRoutes = require('./routes/twitter-auth');
+const telegramRoutes = require('./routes/telegram');
 
 // Import database
 const db = require('./utils/database');
@@ -69,6 +70,8 @@ console.log('🐦 Twitter API Key:', process.env.TWITTER_API_KEY ? 'Set ✅' : '
 console.log('🐦 Twitter API Secret:', process.env.TWITTER_API_SECRET ? 'Set ✅' : 'Missing ❌');
 console.log('🔗 Base URL:', process.env.BASE_URL || 'Not set (using defaults)');
 console.log('🔗 Twitter Callback URL:', process.env.TWITTER_CALLBACK_URL || 'Not set (using defaults)');
+console.log('🤖 Telegram Bot Token:', process.env.TELEGRAM_BOT_TOKEN ? 'Set ✅' : 'Not set (notifications disabled)');
+console.log('🤖 Telegram Bot Username:', process.env.TELEGRAM_BOT_USERNAME || 'Not set');
 
 // Security middleware with updated CSP for Twitter images
 app.use(helmet({
@@ -173,6 +176,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // Activity endpoint for real-time updates
 app.get('/api/activity', async (req, res) => {
