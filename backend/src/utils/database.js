@@ -444,6 +444,29 @@ const dbOperations = {
     }
   },
 
+  // Telegram operations
+  updateUserTelegramId: async (userId, telegramChatId) => {
+    try {
+      const result = await runWithResult(
+        'UPDATE users SET telegram_chat_id = ? WHERE id = ?',
+        [telegramChatId, userId]
+      );
+      return { changes: result.changes };
+    } catch (error) {
+      console.error('❌ updateUserTelegramId error:', error);
+      throw error;
+    }
+  },
+
+  getUserByTelegramId: async (telegramChatId) => {
+    try {
+      return await getAsync('SELECT * FROM users WHERE telegram_chat_id = ?', [telegramChatId]);
+    } catch (error) {
+      console.error('❌ getUserByTelegramId error:', error);
+      throw error;
+    }
+  },
+
   // Transaction helper
   runTransaction: async (callback) => {
     await runAsync('BEGIN TRANSACTION');
@@ -518,6 +541,12 @@ const statements = {
   },
   getRecentUsers: {
     all: (since) => dbOperations.getRecentUsers(since)
+  },
+  updateUserTelegramId: {
+    run: (userId, telegramChatId) => dbOperations.updateUserTelegramId(userId, telegramChatId)
+  },
+  getUserByTelegramId: {
+    get: (telegramChatId) => dbOperations.getUserByTelegramId(telegramChatId)
   }
 };
 
