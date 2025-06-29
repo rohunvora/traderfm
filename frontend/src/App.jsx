@@ -7,6 +7,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import InboxPage from './pages/InboxPage';
+import KOLDashboard from './pages/KOLDashboard';
+import ProjectDashboard from './pages/ProjectDashboard';
 
 // Activity wrapper component
 function ActivityWrapper({ children }) {
@@ -24,6 +26,8 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/u/:handle" element={<ProfilePage />} />
               <Route path="/inbox/:handle" element={<InboxPage />} />
+              <Route path="/kol-dashboard" element={<KOLDashboard />} />
+              <Route path="/project-dashboard" element={<ProjectDashboard />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

@@ -1,225 +1,277 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { userAPI } from '../services/api';
+import { userAPI, dealAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import Loading from '../components/Loading';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { loginWithTwitter, user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const [redirecting, setRedirecting] = React.useState(false);
+  const { loginWithTwitter, user, isAuthenticated, loading: authLoading } = useAuth();
+  const [activeAccordion, setActiveAccordion] = useState(null);
 
-  // Handle post-authentication redirect
-  useEffect(() => {
-    const justAuth = sessionStorage.getItem('justAuthenticated');
-    const authHandle = sessionStorage.getItem('authHandle');
-    
-    if (justAuth === 'true' && authHandle && isAuthenticated) {
-      setRedirecting(true);
-      sessionStorage.removeItem('justAuthenticated');
-      sessionStorage.removeItem('authHandle');
-      navigate(`/inbox/${authHandle}`);
-    }
-  }, [isAuthenticated, navigate]);
-
-  // Fetch user directory
-  const { data: directory, isLoading: directoryLoading, error: directoryError } = useQuery({
-    queryKey: ['userDirectory'],
-    queryFn: () => userAPI.getDirectory(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    onError: (error) => {
-      console.error('Directory fetch error:', error);
-    }
+  // Fetch live deals
+  const { data: liveDeals } = useQuery({
+    queryKey: ['liveDeals'],
+    queryFn: () => dealAPI.getLiveDeals(6),
+    staleTime: 30 * 1000, // 30 seconds
   });
 
-  // Debug logging
-  React.useEffect(() => {
-    if (directory) {
-      console.log('Directory data:', directory);
-    }
-    if (directoryError) {
-      console.error('Directory error:', directoryError);
-    }
-  }, [directory, directoryError]);
+  // Fetch stats
+  const { data: stats } = useQuery({
+    queryKey: ['platformStats'],
+    queryFn: async () => {
+      // TODO: Create a stats endpoint that returns these values
+      return {
+        deals: liveDeals?.deals?.length || 0,
+        value: '$0', // TODO: Calculate from deals
+        advisors: 0 // TODO: Get KOL count
+      };
+    },
+    enabled: !!liveDeals
+  });
 
-  if (authLoading || redirecting) {
+  if (authLoading) {
     return <Loading size="lg" className="mt-20" showMessage />;
   }
 
+  const handleKOLConnect = () => {
+    if (isAuthenticated) {
+      navigate('/kol-dashboard');
+    } else {
+      loginWithTwitter();
+    }
+  };
+
+  const handleProjectOffer = () => {
+    if (isAuthenticated) {
+      navigate('/project-dashboard');
+    } else {
+      loginWithTwitter();
+    }
+  };
+
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2 text-gray-800">
-              Ask Traders Anything
-            </h1>
-            <p className="text-gray-600 mb-2">
-              Get honest insights • Stay anonymous • Learn together
-            </p>
-            {!isAuthenticated && (
-              <p className="text-sm text-gray-500">
-                Join in 5 seconds with Twitter – no forms, no hassle
-              </p>
-            )}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <main className="space-y-20 p-8 max-w-6xl mx-auto">
+        {/* Hero Section */}
+        <section className="text-center space-y-6 pt-16">
+          <h1 className="text-5xl font-extrabold text-gray-900">
+            Turn crypto clout into transparent token grants
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Link Twitter, accept Solana tokens, and share every deal on-chain. No more backroom handshakes.
+          </p>
+          <div className="flex justify-center gap-4 pt-4">
+            <button
+              onClick={handleKOLConnect}
+              className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transform hover:scale-105 transition duration-200 text-lg"
+            >
+              I'm a KOL — Connect Twitter
+            </button>
+            <button
+              onClick={handleProjectOffer}
+              className="bg-white text-gray-800 border-2 border-gray-300 px-8 py-4 rounded-lg font-semibold hover:bg-gray-50 transform hover:scale-105 transition duration-200 text-lg"
+            >
+              I'm a Project — Make Offer
+            </button>
           </div>
+        </section>
 
-          {isAuthenticated && user ? (
-            // Logged in state
-            <div className="space-y-4">
-              {/* User info card */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold ring-2 ring-white">
-                      {user.handle[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">@{user.handle}</p>
-                      <p className="text-sm text-gray-600">You're all set! 🚀</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={logout}
-                    className="text-sm text-gray-500 hover:text-gray-700"
-                    title="Sign out"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+        {/* Social Proof */}
+        <section className="flex justify-center space-x-12">
+          <div className="flex items-center space-x-2">
+            <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="font-medium text-lg">{stats?.deals || 0} deals executed</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <span className="font-medium text-lg">{stats?.value || '$0'} vested</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <svg className="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+            <span className="font-medium text-lg">{stats?.advisors || 0} advisors onboarded</span>
+          </div>
+        </section>
 
-              {/* Quick actions */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => navigate(`/inbox/${user.handle}`)}
-                  className="bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transform hover:scale-105 transition duration-200 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  View Questions
-                </button>
-                <button
-                  onClick={() => navigate(`/u/${user.handle}`)}
-                  className="bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-semibold hover:bg-gray-200 transform hover:scale-105 transition duration-200 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Your Page
-                </button>
-              </div>
+        {/* How It Works */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-3xl font-semibold text-gray-900">For KOLs</h2>
+            <ol className="list-decimal list-inside space-y-3 text-gray-700 text-lg">
+              <li>Link your Twitter handle & wallet</li>
+              <li>Review & sign a Solana token grant</li>
+              <li>Let the bot add required #ad disclosures</li>
+              <li>Watch tokens vest on-chain—use or trade freely</li>
+            </ol>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-3xl font-semibold text-gray-900">For Projects</h2>
+            <ol className="list-decimal list-inside space-y-3 text-gray-700 text-lg">
+              <li>Create an offer with vesting details</li>
+              <li>Deposit Solana tokens into the vesting contract</li>
+              <li>Let KOLs accept on-chain—no DMs needed</li>
+              <li>Gain trust with a public deal ledger</li>
+            </ol>
+          </div>
+        </section>
 
-              {/* Share link */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-600 mb-2 text-center font-medium">Share to receive questions:</p>
-                <div className="flex items-center gap-2">
-                  <code className="text-xs bg-white px-2 py-1 rounded border flex-1 truncate">
-                    {window.location.origin}/u/{user.handle}
-                  </code>
-                  <button
-                    onClick={(event) => {
-                      navigator.clipboard.writeText(`${window.location.origin}/u/${user.handle}`);
-                      // Small haptic feedback via transform
-                      const btn = event.currentTarget;
-                      btn.style.transform = 'scale(0.95)';
-                      setTimeout(() => btn.style.transform = 'scale(1)', 100);
-                    }}
-                    className="text-blue-500 hover:text-blue-600 transition-transform"
-                    title="Copy link"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            // Not logged in state
-            <>
-              <button
-                onClick={loginWithTwitter}
-                className="w-full bg-[#1DA1F2] text-white py-4 rounded-lg font-semibold hover:bg-[#1A8CD8] transform hover:scale-105 transition duration-200 flex items-center justify-center text-lg"
-              >
-                <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                </svg>
-                Continue with Twitter
-              </button>
+        {/* Compliance Flex */}
+        <section className="bg-blue-50 p-10 rounded-2xl space-y-4">
+          <div className="flex items-center space-x-3">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 className="text-2xl font-semibold text-gray-900">Compliance baked in</h3>
+          </div>
+          <p className="text-gray-700 text-lg">
+            We hard-coded SEC §17(b) and FTC disclosures into every agreement. No excuses, just transparency.
+          </p>
+          <a href="/SAATP.pdf" className="text-blue-600 hover:text-blue-700 underline text-lg font-medium">
+            View the advisor agreement template →
+          </a>
+        </section>
 
-              <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 text-center">
-                  <strong>Why traders love TraderFM:</strong><br />
-                  ✓ Ask tough questions anonymously<br />
-                  ✓ Share knowledge without the noise<br />
-                  ✓ Build your reputation through answers<br />
-                  ✓ Connect with real traders instantly
-                </p>
-              </div>
-            </>
-          )}
-
-          {/* User Directory */}
-          <div className="mt-6">
-            <p className="text-sm font-medium text-gray-700 mb-3 text-center">
-              🔥 Trending Traders
-            </p>
-            {directoryLoading ? (
-              <div className="flex justify-center">
-                <Loading size="sm" />
-              </div>
-            ) : directory?.users?.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                {directory.users.slice(0, 10).map((user) => (
-                  <button
-                    key={user.handle}
-                    onClick={() => navigate(`/u/${user.handle}`)}
-                    className="flex items-center p-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition text-left group"
-                  >
-                    {user.twitter_profile_image && (
+        {/* Live Deals Feed */}
+        <section>
+          <h2 className="text-3xl font-semibold mb-6 text-gray-900">Live Deals</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {liveDeals?.deals?.length > 0 ? (
+              liveDeals.deals.map((deal) => (
+                <div key={deal.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
+                  <div className="flex items-center mb-3">
+                    {deal.kol_profile_image && (
                       <img
-                        src={user.twitter_profile_image}
-                        alt={user.handle}
-                        className="w-8 h-8 rounded-full mr-3 group-hover:ring-2 group-hover:ring-blue-100 transition"
+                        src={deal.kol_profile_image}
+                        alt={deal.kol_handle}
+                        className="w-10 h-10 rounded-full mr-3"
                       />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          @{user.handle}
-                        </p>
-                        {user.auth_type === 'twitter' && (
-                          <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                          </svg>
-                        )}
-                      </div>
-                      {user.twitter_name && (
-                        <p className="text-xs text-gray-500 truncate">
-                          {user.twitter_name}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-400">
-                        {user.answer_count} {user.answer_count === 1 ? 'answer' : 'answers'} shared
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    <h4 className="font-semibold text-gray-900">@{deal.kol_handle}</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {deal.project_name} • {deal.token_amount} {deal.token_symbol}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cliff: {deal.cliff_days} days • Total: {deal.total_vesting_days} days
+                  </p>
+                </div>
+              ))
             ) : (
-              <p className="text-sm text-gray-500 text-center">
-                Be the pioneer! You'll be the first trader here 🎯
-              </p>
+              <>
+                {/* Placeholder cards */}
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h4 className="font-semibold text-gray-400">No deals yet</h4>
+                  <p className="text-sm text-gray-400">Be the first!</p>
+                </div>
+              </>
             )}
           </div>
-        </div>
-      </div>
+        </section>
+
+        {/* Pricing */}
+        <section className="space-y-8 text-center">
+          <h2 className="text-3xl font-semibold text-gray-900">Pricing</h2>
+          <div className="flex flex-col md:flex-row justify-center gap-8">
+            <div className="bg-white rounded-xl shadow-lg p-8 space-y-4 flex-1 max-w-sm">
+              <h3 className="text-2xl font-semibold text-gray-900">Free</h3>
+              <p className="text-gray-600 text-lg">Unlimited offers • 0.02% platform fee</p>
+              <button
+                onClick={handleKOLConnect}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              >
+                Get Started
+              </button>
+            </div>
+            <div className="bg-white rounded-xl shadow-lg p-8 space-y-4 flex-1 max-w-sm border-2 border-blue-500">
+              <h3 className="text-2xl font-semibold text-gray-900">Pro</h3>
+              <p className="text-gray-600 text-lg">White-label UI • Dedicated support • API access</p>
+              <button className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition">
+                Coming Soon
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="space-y-6">
+          <h2 className="text-3xl font-semibold text-gray-900">FAQ</h2>
+          <div className="space-y-4">
+            {[
+              {
+                q: "Is this legal in the U.S.?",
+                a: "Yes. Every grant uses a standard SEC-compliant advisor agreement and on-chain disclosures."
+              },
+              {
+                q: "Can I revoke a grant?",
+                a: "Yes—projects retain revocation rights via the vesting contract until tokens unlock."
+              },
+              {
+                q: "Why Solana only?",
+                a: "We launched on Solana for fast, low-cost transactions. More chains coming soon."
+              }
+            ].map((faq, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <button
+                  onClick={() => setActiveAccordion(activeAccordion === index ? null : index)}
+                  className="w-full px-6 py-4 text-left font-medium text-gray-900 hover:bg-gray-50 transition flex justify-between items-center"
+                >
+                  {faq.q}
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transform transition ${activeAccordion === index ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {activeAccordion === index && (
+                  <div className="px-6 py-4 text-gray-600 border-t">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="text-center space-y-6 pb-16">
+          <h2 className="text-4xl font-bold text-gray-900">Ready to turn influence into tokens?</h2>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={handleKOLConnect}
+              className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transform hover:scale-105 transition duration-200 text-lg"
+            >
+              I'm a KOL — Connect Twitter
+            </button>
+            <button
+              onClick={handleProjectOffer}
+              className="bg-white text-gray-800 border-2 border-gray-300 px-8 py-4 rounded-lg font-semibold hover:bg-gray-50 transform hover:scale-105 transition duration-200 text-lg"
+            >
+              I'm a Project — Make Offer
+            </button>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="text-center text-sm text-gray-500 space-y-3 border-t pt-8">
+          <div className="flex justify-center space-x-6">
+            <a href="/docs" className="hover:text-gray-700">Docs</a>
+            <a href="/audit" className="hover:text-gray-700">Audit Report</a>
+            <a href="/SAATP.pdf" className="hover:text-gray-700">SAATP PDF</a>
+            <a href="https://twitter.com/OpenAdvisor" className="hover:text-gray-700">@OpenAdvisor</a>
+          </div>
+          <p>OpenAdvisor is not a broker-dealer. Use at your own risk.</p>
+        </footer>
+      </main>
     </div>
   );
 } 

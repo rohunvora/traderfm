@@ -20,6 +20,8 @@ const answerRoutes = require('./routes/answers');
 const statsRoutes = require('./routes/stats');
 const twitterAuthRoutes = require('./routes/twitter-auth');
 const telegramRoutes = require('./routes/telegram');
+const projectRoutes = require('./routes/projects');
+const dealRoutes = require('./routes/deals');
 
 // Import database
 const db = require('./utils/database');
@@ -177,6 +179,8 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/deals', dealRoutes);
 
 // Activity endpoint for real-time updates
 app.get('/api/activity', async (req, res) => {
