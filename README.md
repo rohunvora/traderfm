@@ -1,10 +1,4 @@
-# TraderFM → OpenAdvisor (Pivot in Progress)
-
-> ⚠️ **IMPORTANT:** This repository is being pivoted from TraderFM to OpenAdvisor. See [OPENADVISOR_PIVOT.md](./OPENADVISOR_PIVOT.md) for details about the new direction and current status.
-
----
-
-# TraderFM (Original Documentation)
+# TraderFM - Anonymous Q&A Platform for Traders
 
 TraderFM is a modern anonymous Q&A platform designed specifically for traders. Users can create handles, receive anonymous questions about trading, markets, and investment strategies, and share their insights publicly.
 
@@ -189,3 +183,71 @@ Body: { "handle": "yourhandle", "secretKey": "your-secret" }
 
 **Get unanswered questions:**
 ```
+GET /api/questions/:handle/unanswered
+Headers: { "Authorization": "Bearer YOUR_TOKEN" }
+```
+
+**Answer a question:**
+```
+POST /api/questions/:id/answer
+Headers: { "Authorization": "Bearer YOUR_TOKEN" }
+Body: { "answerText": "Your answer" }
+```
+
+## Project Structure
+
+```
+traderfm/
+├── frontend/               # React frontend
+│   ├── src/
+│   │   ├── components/    # Reusable components
+│   │   ├── pages/        # Page components
+│   │   ├── services/     # API services
+│   │   ├── hooks/        # Custom React hooks
+│   │   └── utils/        # Utility functions
+│   └── package.json
+├── backend/               # Express backend
+│   ├── src/
+│   │   ├── routes/       # API routes
+│   │   ├── middleware/   # Express middleware
+│   │   ├── utils/        # Utility functions
+│   │   └── index.js      # Main server file
+│   └── package.json
+├── docker-compose.yml     # Docker configuration
+└── Dockerfile            # Container definition
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | 5000 |
+| `NODE_ENV` | Environment (development/production) | development |
+| `JWT_SECRET` | Secret key for JWT tokens | (required) |
+| `FRONTEND_URL` | Frontend URL for CORS | http://localhost:3000 |
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## Security Considerations
+
+- Change the default JWT_SECRET in production
+- Use HTTPS in production
+- Keep dependencies updated
+- Enable CORS only for your frontend domain
+- Consider adding rate limiting to all endpoints
+- Implement input sanitization
+- Use environment variables for sensitive data
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## Support
+
+For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/rohunvora/traderfm).

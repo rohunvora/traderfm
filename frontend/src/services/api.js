@@ -58,16 +58,6 @@ export const userAPI = {
   createHandle: (handle) => api.post('/users/create', { handle }),
   authenticate: (handle, secretKey) => api.post('/users/auth', { handle, secretKey }),
   getDirectory: () => api.get('/users/directory'),
-  connectWallet: (walletAddress) => 
-    api.post('/users/connect-wallet', {
-      wallet_address: walletAddress,
-    }),
-  updateKOLStatus: (isKol, description) =>
-    api.post('/users/kol-status', {
-      is_kol: isKol,
-      description,
-    }),
-  getKOLs: () => api.get('/users/kols'),
 };
 
 // Questions API
@@ -88,39 +78,6 @@ export const answersAPI = {
 // Stats API
 export const statsAPI = {
   getHandleStats: (handle) => api.get(`/stats/${handle}`),
-};
-
-// Project API
-export const projectAPI = {
-  create: (projectData) =>
-    api.post('/projects', projectData),
-  getMyProjects: () => api.get('/projects/my-projects'),
-  getById: (id) => api.get(`/projects/${id}`),
-  getProjectDeals: (id, status) => {
-    const params = status ? `?status=${status}` : '';
-    return api.get(`/projects/${id}/deals${params}`);
-  },
-};
-
-// Deal API
-export const dealAPI = {
-  create: (dealData) =>
-    api.post('/deals', dealData),
-  getMyDeals: (status) => {
-    const params = status ? `?status=${status}` : '';
-    return api.get(`/deals/my-deals${params}`);
-  },
-  accept: (id) =>
-    api.post(`/deals/${id}/accept`),
-  reject: (id) =>
-    api.post(`/deals/${id}/reject`),
-  getById: (id) => api.get(`/deals/${id}`),
-  getLiveDeals: (limit = 10) => api.get(`/deals/feed/live?limit=${limit}`),
-};
-
-// Activity API (for real-time updates)
-export const activityAPI = {
-  // Implementation needed
 };
 
 export default api; 

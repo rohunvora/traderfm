@@ -2,23 +2,25 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { statements } = require('../utils/database');
-const { generateToken, authenticate } = require('../middleware/auth');
+const { generateToken } = require('../middleware/auth');
 const { validate, handleRules, authRules, handleParamRules } = require('../middleware/validation');
-const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
-// Get all active users (directory)
+// Get all public users for directory
 router.get('/directory', async (req, res) => {
   try {
+    global.logger?.log('📁 Fetching user directory');
+    
+    // Get all users with basic info (excluding sensitive data)
     const users = await statements.getAllUsers.all();
-    res.json({ users });
+    
+    global.logger?.log(`✅ Found ${users.length} users for directory`);
+    res.json({ users: users || [] });
+    
   } catch (error) {
-    console.error('Error fetching user directory:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch user directory', 
-      error: error.message 
-    });
+    global.logger?.error('❌ Directory fetch error:', error);
+    res.status(500).json({ message: 'Server error', users: [] });
   }
 });
 
@@ -151,108 +153,6 @@ router.post('/auth', authRules, validate, async (req, res) => {
   } catch (error) {
     global.logger?.error('❌ Auth error:', error);
     res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Connect wallet address
-router.post('/connect-wallet',
-  authenticate,
-  [
-    body('wallet_address').notEmpty().trim()
-      .matches(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/)
-      .withMessage('Invalid Solana wallet address')
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ 
-          message: 'Validation error', 
-          errors: errors.array() 
-        });
-      }
-
-      const { wallet_address } = req.body;
-
-      // Update user's wallet address
-      await statements.updateUserWallet.run({
-        user_id: req.user.id,
-        wallet_address
-      });
-
-      global.logger?.log(`💳 Wallet connected: ${req.user.handle} - ${wallet_address}`);
-
-      res.json({ 
-        message: 'Wallet connected successfully',
-        wallet_address
-      });
-    } catch (error) {
-      global.logger?.error('❌ Error connecting wallet:', error);
-      res.status(500).json({ 
-        message: 'Failed to connect wallet',
-        error: error.message 
-      });
-    }
-  }
-);
-
-// Update KOL status
-router.post('/kol-status',
-  authenticate,
-  [
-    body('is_kol').isBoolean().withMessage('KOL status must be true or false'),
-    body('description').optional().trim()
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ 
-          message: 'Validation error', 
-          errors: errors.array() 
-        });
-      }
-
-      const { is_kol, description } = req.body;
-
-      // Update user's KOL status
-      await statements.updateUserKOLStatus.run({
-        user_id: req.user.id,
-        is_kol,
-        description
-      });
-
-      global.logger?.log(`🌟 KOL status updated: ${req.user.handle} - ${is_kol ? 'KOL' : 'Not KOL'}`);
-
-      res.json({ 
-        message: 'KOL status updated successfully',
-        is_kol,
-        description
-      });
-    } catch (error) {
-      global.logger?.error('❌ Error updating KOL status:', error);
-      res.status(500).json({ 
-        message: 'Failed to update KOL status',
-        error: error.message 
-      });
-    }
-  }
-);
-
-// Get all KOLs
-router.get('/kols', async (req, res) => {
-  try {
-    const kols = await statements.getKOLs.all();
-    res.json({ 
-      kols,
-      count: kols.length
-    });
-  } catch (error) {
-    global.logger?.error('❌ Error fetching KOLs:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch KOLs',
-      error: error.message 
-    });
   }
 });
 
